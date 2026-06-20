@@ -27,7 +27,8 @@ already exists in `KOMPOSOS-IV-CHEM` (5 scorers, heterostructure analysis, an in
 in `KOMPOSOS-GRID`. We port both onto this substrate; the one genuinely new piece is a
 `netlist_bridge` that turns real chip layout (DEF/SPEF/netlist) into a `Category`.
 
-**Read `docs/SILICON_PLAN.md` for the data sources, roadmap, and target layout.**
+**Read `docs/SILICON_PLAN.md` for the data sources, roadmap, and target layout, and
+`docs/SILICON_WHITEPAPER.md` for the methods, findings, and where it can go.**
 
 ---
 

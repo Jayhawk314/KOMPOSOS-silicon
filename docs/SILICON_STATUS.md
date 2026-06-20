@@ -1,8 +1,9 @@
 # KOMPOSOS-V Silicon Co-Design Status
 
-> Current as of 2026-06-19 (America/Los_Angeles). This is the concise status and
-> handoff document. `docs/SILICON_PLAN.md` remains the architectural plan and
-> `docs/SESSIONS.md` remains the chronological log.
+> Current as of 2026-06-20 (America/Los_Angeles). This is the concise status and
+> handoff document. `docs/SILICON_PLAN.md` remains the architectural plan,
+> `docs/SESSIONS.md` the chronological log, and `docs/SILICON_WHITEPAPER.md` the
+> methods/findings/directions explainer (the math, the results, and the pivots).
 
 ## Executive status
 
