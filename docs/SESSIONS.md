@@ -284,6 +284,25 @@ Same 45nm-node caveat as IR (PDN-delivery-structured). `tests/test_silicon_em_sc
 (2). Updated hotspot VALIDATION receipt (now cites IR +0.5 AND EM +0.64).
 **Edges #1 (sub-7nm swaps) and #3 (real ML tool thru trust gate) remain not done.**
 
+## 2026-06-20 (later) — edge #3 done properly: a learned model, trust-gated, beats baseline
+
+Built a REAL proposer (not a stand-in): `ml_hotspot.py` — a ridge-regression IR-drop
+predictor over per-tile layout features (cap, fanout, density, area, demand, distance-from-
+center), trained on one design and evaluated on a DIFFERENT one (cross-design held-out).
+- **Learning beats the cheap baseline, both directions:** train aes→test ibex ML +0.572 vs
+  baseline +0.478; train ibex→test aes ML +0.657 vs +0.597. The multi-feature + spatial
+  combination captures PDN-delivery structure the single demand signal misses (modest but
+  consistent ~+0.06-0.09 gain). Generalizes across designs.
+- **The trust gate has TEETH:** it accepts the model only if it beats a shuffled control on
+  HELD-OUT data. A model trained on signal but tested on noise is BLOCKED (in-sample looks
+  fine, held-out fails) — exactly the black-box failure the gate exists to catch. This is
+  the project roadmap's rule made real: a learned model must show held-out value and may
+  never gate a verdict (proposal-side only, numpy+stdlib).
+- `tests/test_silicon_ml_hotspot.py` (3: trusted-generalizes, blocked-on-noise, real-data).
+  Suite green. This makes #3 genuinely done with a real model, not a demo stand-in.
+- **Edge #1 (sub-7nm swap branch) still open** — and lower value, since the IR/EM detector
+  itself fails at 7nm (node finding), so a swap test there isn't grounded.
+
 ---
 
 ## 2026-06-20 — #3 measured tier: OpenSTA toolchain BLOCKED (host), ingestion proven
