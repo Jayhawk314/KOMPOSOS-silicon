@@ -123,8 +123,16 @@ python -m domains.silicon.agent_tools --def <design>.def --spef <design>.spef \
   actions) + WHY (the evidence ladder, every claim tiered measured → measured_proxy →
   validated_hypothesis → literature_value).
 
+- **Phase 6** — the EM side is grounded twice over (`materials_grounding.py`): activation
+  energy AND current-density capacity (Jmax) both rank Al<Cu<Co<Ru<W (Spearman +1.00 each).
+  And the **trust layer** (`trust_layer.py`) gates any external/black-box proposer behind
+  the receipt: it keeps a grounded suggestion and BLOCKS one asserting fabricated values
+  (0.99 vs cited 0.80) or an unknown material — use AI EDA tools without trusting them
+  blindly.
+
 The differentiator is the evidence ladder itself: incumbents compute EM/IR; none connect
-that stress to a grounded, *proven* materials fix with a checkable receipt for every step.
+that stress to a grounded, *proven* materials fix with a checkable receipt for every step —
+and none let you safely wrap a black-box AI proposer in that same discipline.
 
 ## Reproduce / audit
 

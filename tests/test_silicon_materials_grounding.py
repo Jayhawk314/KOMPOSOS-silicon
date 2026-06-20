@@ -5,7 +5,7 @@
 
 from domains.silicon.materials_grounding import (
     ground_metal, ground_interconnect_table, ground_em_against_melting_point,
-    grounded_citation, REFERENCE,
+    ground_jmax_against_em, jmax_ratio, grounded_citation, REFERENCE,
 )
 from domains.silicon.interconnect import recommend_interconnect, INTERCONNECT_METALS
 
@@ -35,6 +35,14 @@ def test_em_robustness_grounded_in_melting_point():
     em = ground_em_against_melting_point()
     assert em.concordant
     assert em.ordered_by_tm == em.ordered_by_ea       # perfectly concordant here
+
+
+def test_em_robustness_grounded_in_two_independent_properties():
+    # EM-capacity (Jmax) must agree with EM-activation energy — a second, independent check.
+    j = ground_jmax_against_em()
+    assert j.concordant and j.ordered_by_tm == j.ordered_by_ea
+    # A refractory swap carries strictly more current before EM failure.
+    assert jmax_ratio("Cu", "W") > 1 and jmax_ratio("Cu", "Ru") > 1
 
 
 def test_recommendation_carries_cited_receipts():

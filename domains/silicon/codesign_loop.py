@@ -30,7 +30,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 
 from .interconnect import INTERCONNECT_METALS, recommend_interconnect
-from .materials_grounding import EVIDENCE_TIER as MAT_TIER, grounded_citation
+from .materials_grounding import EVIDENCE_TIER as MAT_TIER, grounded_citation, jmax_ratio
 
 _KB_eV_K = 8.617e-5          # Boltzmann constant, eV/K
 _T_OP_K = 378.0             # 105 C operating/stress temperature (standard EM proxy)
@@ -46,6 +46,7 @@ class ProvenFix:
     is_local: bool
     em_mttf_gain_orders: float       # log10 of the EM lifetime multiplier (Black's eq)
     resistance_penalty_x: float      # rho_candidate / rho_baseline (>1 = worse)
+    jmax_ratio: float                # candidate EM current capacity vs baseline (cited)
     action: str                      # swap_interconnect | widen_wire | none
     keep: bool
     status: str                      # AGREE | HOLLOW (HonestyGate on the recommendation)
@@ -58,6 +59,7 @@ class ProvenFix:
                 "wirelength_um": round(self.wirelength_um, 2), "is_local": self.is_local,
                 "em_mttf_gain_orders": round(self.em_mttf_gain_orders, 1),
                 "resistance_penalty_x": round(self.resistance_penalty_x, 2),
+                "jmax_ratio": round(self.jmax_ratio, 1),
                 "action": self.action, "keep": self.keep, "status": self.status,
                 "tier": self.tier, "reasons": self.reasons, "citations": self.citations}
 
@@ -78,7 +80,7 @@ def prove_fix(net: str, wirelength_um: float, local_threshold_um: float,
     if cand == baseline:
         reasons.append(f"{baseline} already optimal; no swap")
         return ProvenFix(net, baseline, baseline, wirelength_um, is_local, 0.0, 1.0,
-                         "none", False, rec.status, reasons,
+                         1.0, "none", False, rec.status, reasons,
                          [grounded_citation(baseline)])
 
     ea_base = INTERCONNECT_METALS[baseline].em_activation_eV
@@ -87,12 +89,14 @@ def prove_fix(net: str, wirelength_um: float, local_threshold_um: float,
     rho_new = INTERCONNECT_METALS[cand].resistivity_uohm_cm
     em_orders = _em_gain_orders(ea_base, ea_new)
     r_penalty = rho_new / rho_base
+    jratio = jmax_ratio(baseline, cand) or 1.0      # cited current-capacity gain (Phase 6a)
 
     em_helps = em_orders > 0
     if em_helps and is_local:
         action, keep = "swap_interconnect", True
         reasons.append(f"swap {baseline}->{cand}: EM lifetime x10^{em_orders:.0f} "
-                       f"(Black's eq, Ea {ea_base:.2f}->{ea_new:.2f} eV); resistance "
+                       f"(Black's eq, Ea {ea_base:.2f}->{ea_new:.2f} eV), carries x{jratio:.0f} "
+                       f"current before EM failure (Jmax); resistance "
                        f"x{r_penalty:.1f} acceptable on a local net ({wirelength_um:.1f} um)")
     elif em_helps:
         action, keep = "widen_wire", True
@@ -108,7 +112,7 @@ def prove_fix(net: str, wirelength_um: float, local_threshold_um: float,
         reasons.append("recommendation HOLLOW (not grounded) -> rolled back")
 
     return ProvenFix(net, baseline, cand, wirelength_um, is_local, em_orders, r_penalty,
-                     action, keep, rec.status, reasons,
+                     jratio, action, keep, rec.status, reasons,
                      [grounded_citation(baseline), grounded_citation(cand)])
 
 

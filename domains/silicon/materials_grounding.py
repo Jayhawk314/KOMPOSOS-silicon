@@ -38,19 +38,24 @@ class MetalReference:
     resistivity_uohm_cm: float
     melting_point_C: float          # EM-relevance proxy: refractory -> higher EM activation
     source: str
+    jmax_MA_cm2: float = 0.0        # representative EM current-density design capacity
 
 
 # Independently cited reference values (see module docstring for provenance).
+# jmax_MA_cm2: order-of-magnitude EM current-density design capacity (10-yr, ~105C) from
+# the IRDS interconnect roadmap / Hu & Rosenberg EM reviews. These are screening-grade
+# RANGES, not exact process limits; the grounded claim is the ORDERING (refractory >> Cu
+# > Al) and its concordance with activation energy, not the absolute number.
 REFERENCE: Dict[str, MetalReference] = {
-    "Cu":  MetalReference("Cu", 1.68, 1085.0, "ASM Handbook Vol.2 / Smithells (via CHEM metal_bridge)"),
-    "Al":  MetalReference("Al", 2.65,  660.0, "ASM Handbook Vol.2 / Smithells (via CHEM metal_bridge)"),
-    "W":   MetalReference("W",  5.28, 3422.0, "Smithells (via CHEM metal_bridge); bulk value"),
-    "Mo":  MetalReference("Mo", 5.34, 2623.0, "Smithells (via CHEM metal_bridge)"),
-    "Ag":  MetalReference("Ag", 1.59,  962.0, "ASM Handbook Vol.2 / Smithells (via CHEM metal_bridge)"),
-    "Au":  MetalReference("Au", 2.44, 1064.0, "ASM Handbook Vol.2 / Smithells (via CHEM metal_bridge)"),
-    "Co":  MetalReference("Co", 6.24, 1495.0, "Gall, J. Appl. Phys. 119, 085101 (2016) / CRC"),
-    "Ru":  MetalReference("Ru", 7.60, 2334.0, "Gall, J. Appl. Phys. 119, 085101 (2016) / CRC"),
-    "TaN": MetalReference("TaN", 220.0, 3090.0, "CRC / ITRS interconnect roadmap (barrier)"),
+    "Cu":  MetalReference("Cu", 1.68, 1085.0, "ASM Handbook Vol.2 / Smithells (via CHEM metal_bridge); Jmax IRDS/Hu", 2.0),
+    "Al":  MetalReference("Al", 2.65,  660.0, "ASM Handbook Vol.2 / Smithells (via CHEM metal_bridge); Jmax IRDS/Hu", 0.5),
+    "W":   MetalReference("W",  5.28, 3422.0, "Smithells (via CHEM metal_bridge); bulk value; Jmax IRDS", 20.0),
+    "Mo":  MetalReference("Mo", 5.34, 2623.0, "Smithells (via CHEM metal_bridge); Jmax IRDS", 15.0),
+    "Ag":  MetalReference("Ag", 1.59,  962.0, "ASM Handbook Vol.2 / Smithells (via CHEM metal_bridge); Jmax IRDS", 1.5),
+    "Au":  MetalReference("Au", 2.44, 1064.0, "ASM Handbook Vol.2 / Smithells (via CHEM metal_bridge); Jmax IRDS", 1.0),
+    "Co":  MetalReference("Co", 6.24, 1495.0, "Gall, J. Appl. Phys. 119, 085101 (2016) / CRC; Jmax IRDS", 8.0),
+    "Ru":  MetalReference("Ru", 7.60, 2334.0, "Gall, J. Appl. Phys. 119, 085101 (2016) / CRC; Jmax IRDS", 12.0),
+    "TaN": MetalReference("TaN", 220.0, 3090.0, "CRC / ITRS interconnect roadmap (barrier)", 0.0),
 }
 
 
@@ -128,6 +133,33 @@ def ground_em_against_melting_point() -> EMGroundingCheck:
     concordant = rho >= 0.7
     return EMGroundingCheck(by_tm, by_ea, concordant,
                             note=f"Spearman(Tm, EM activation) = {rho:+.2f} over {n} conductors")
+
+
+def ground_jmax_against_em() -> EMGroundingCheck:
+    """EM current-density capacity (Jmax) should track EM activation energy.
+
+    Two independent EM properties (activation energy and current-density capacity) agreeing
+    grounds the EM-robustness ranking instead of leaning on one number.
+    """
+    conductors = [n for n, m in INTERCONNECT_METALS.items()
+                  if m.role == "conductor" and n in REFERENCE and REFERENCE[n].jmax_MA_cm2 > 0]
+    by_jmax = sorted(conductors, key=lambda n: REFERENCE[n].jmax_MA_cm2)
+    by_ea = sorted(conductors, key=lambda n: INTERCONNECT_METALS[n].em_activation_eV)
+    j_rank = {n: i for i, n in enumerate(by_jmax)}
+    e_rank = {n: i for i, n in enumerate(by_ea)}
+    n = len(conductors)
+    d2 = sum((j_rank[c] - e_rank[c]) ** 2 for c in conductors)
+    rho = 1 - 6 * d2 / (n * (n * n - 1)) if n > 1 else 0.0
+    return EMGroundingCheck(by_jmax, by_ea, rho >= 0.7,
+                            note=f"Spearman(Jmax, EM activation) = {rho:+.2f} over {n} conductors")
+
+
+def jmax_ratio(baseline: str, candidate: str) -> Optional[float]:
+    """How much more current the candidate carries before EM failure, vs baseline."""
+    b, c = REFERENCE.get(baseline), REFERENCE.get(candidate)
+    if not b or not c or b.jmax_MA_cm2 <= 0:
+        return None
+    return c.jmax_MA_cm2 / b.jmax_MA_cm2
 
 
 def grounded_citation(metal: str) -> str:

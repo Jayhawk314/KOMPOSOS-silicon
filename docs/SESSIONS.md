@@ -216,9 +216,30 @@ arc this session: timing-prediction falsified (the right way) → pivot → stru
 real IR-drop (measured win) → hotspot detector → materials grounded in cited data →
 find→fix→prove loop → one productized report. The differentiator is the evidence ladder:
 incumbents compute EM/IR; none connect stress to a grounded, PROVEN materials fix with a
-checkable receipt for every step. Possible next: more designs/nodes, real EM current-limit
-(Jmax) grounding for the swap branch, a sub-7nm design where local-interconnect swaps fire,
-or the trust-layer demo (wrap an external ML proposer behind the receipt gate).
+checkable receipt for every step.
+
+## 2026-06-20 (later) — Phase 6: Jmax grounding + the trust-layer demo
+
+Pushed on the open edges.
+- **Jmax grounding (6a):** added cited EM current-density capacity (Jmax, IRDS/Hu) to the
+  metal reference. Second independent EM check — Spearman(Jmax, EM activation) = +1.00
+  (Al<Cu<Co<Ru<W), concordant with the melting-point check. The co-design swap reason now
+  cites the current-capacity gain (Cu→W = x10 current before EM failure), not just Black's
+  eq. NOTE the "swaps never fire" edge was NOT a bug: on aes/ibex the high-current nets are
+  genuinely long/global, so widen is correct; the swap branch is right to stay quiet and is
+  unit-tested for local nets.
+- **Trust layer (6b):** `domains/silicon/trust_layer.py` — gate ANY external/black-box
+  proposer behind the receipt. A proposal is kept only if its asserted values MATCH the
+  cited facts AND grounds via HonestyGate. Demo: grounded ranker → KEEP; an LLM asserting
+  fabricated values (0.99 vs cited 0.80) → BLOCK ("fabricated rationale"); unknown metal →
+  BLOCK. (First pass accepted the fabrication because HonestyGate grounds *vocabulary* not
+  *values*; added an explicit value-vs-cited-fact check to catch it.) This is the meet-the-
+  market story: use black-box AI EDA tools without trusting them blindly.
+- `tests/test_silicon_trust_layer.py` (5) + grounding Jmax test; suite green.
+- **The five-phase product + trust layer are complete.** Honest remaining: a sub-7nm
+  design would exercise the metal-swap branch; real per-segment EM current-density (vs
+  Jmax, using LEF cross-sections) would lift the EM check from validated_hypothesis toward
+  measured; wrap a *real* third-party ML tool (not a demo stand-in) through the trust gate.
 
 ---
 
