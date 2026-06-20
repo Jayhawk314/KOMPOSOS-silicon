@@ -179,6 +179,26 @@ melting point + sources: ASM Handbook Vol.2, Smithells) for Cu/Al/W/Mo/Ag/Au.
 - **Next (Phase 4):** close the loop — hotspot net (Phase 1-2) → grounded material fix
   (Phase 3) → re-verify it improves the real metric → keep only if proven.
 
+## 2026-06-20 (later) — Phase 4 DONE: reliability co-design loop closed (find→fix→PROVE)
+
+New `domains/silicon/codesign_loop.py` ties the whole bridge together and — crucially —
+proves BOTH sides of the fix, not one:
+- FIND: worst current-demand nets from the validated hotspot signal (Phase 1-2).
+- FIX: grounded interconnect swap (Phase 3, cited).
+- PROVE: EM lifetime gain via **Black's equation** (MTTF ~ exp(Ea/kT); grounded Ea) AND
+  the **resistance cost** (cited ρ_new/ρ_old). A Cu→W swap gives ~10^11x EM lifetime but
+  3.3x resistance — only worth it on a SHORT local net (bounded absolute R). The net's
+  REAL wirelength (layout) decides: local→swap, global→widen_wire instead.
+- KEEP/REJECT: gated by the same HonestyGate that grounds the recommendation; HOLLOW→reject.
+- **Honest real result:** on aes/ibex the worst-current nets are all long global lines, so
+  the loop correctly refuses the swap (would triple R) and redirects to widening — exactly
+  the right call, and a genuine co-design *decision*, not a rubber stamp. (Fixed a
+  `_wirelen` None-guard.) tier=`validated_hypothesis` (cited physics + real geometry).
+- `tests/test_silicon_codesign_loop.py` (5 tests: swap-for-local, widen-for-global,
+  reject, real-aes). **Full suite: 268 passed.**
+- **Next (Phase 5):** productize — one CLI/portfolio that runs find→fix→prove on a layout
+  and emits the receipt-backed reliability action portfolio.
+
 ---
 
 ## 2026-06-20 — #3 measured tier: OpenSTA toolchain BLOCKED (host), ingestion proven
