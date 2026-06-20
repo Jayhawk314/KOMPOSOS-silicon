@@ -1,0 +1,63 @@
+# ── Python ───────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# ── OS / editor ──────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# ── Data: downloaded once, never committed (see docs/SILICON_PLAN.md §4) ──
+# Materials Project / chemistry caches
+data/cache/
+data/calibration/
+data/proteins/
+data/drugs/
+*.json.gz
+
+# Silicon EDA artifacts (OpenLane / OpenROAD outputs)
+*.def
+*.lef
+*.spef
+*.gds
+*.gds2
+*.oas
+*.oasis
+*.v.gz
+# OpenLane run directories
+runs/
+# downloaded netlists / PDK / benchmarks (external, reproducible)
+domains/silicon/data/
+
+# Large tabular inputs
+*.xlsx
+EIA930_*.csv
+*PFASSTRUCT*.txt
+
+# ── Generated reports / scratch ──────────────────────────────────────────
+reports/figures/*.svg
+reports/figures/*.png
+*.html
+predictions/
+results/
+sessions/
+
+# ── Secrets ──────────────────────────────────────────────────────────────
+.env
+*.key
+mp_api_key*
+</content>
