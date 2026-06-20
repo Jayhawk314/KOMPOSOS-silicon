@@ -25,9 +25,11 @@ from typing import Dict, List, Tuple
 
 from .netlist_bridge import NetlistBridge
 
-# Measured validation receipt that every hotspot claim carries (see ir_scoreboard.py).
-VALIDATION = ("current-demand (cap x fanout) predicts real OpenROAD IR-drop at Spearman "
-              "+0.47..+0.58 on aes/ibex (measured); fanout/density alone need no extraction")
+# Measured validation receipt that every hotspot claim carries (see ir_scoreboard.py,
+# em_scoreboard.py). Validated against TWO independent measured quantities at mature nodes.
+VALIDATION = ("current-demand predicts real OpenROAD IR-drop (+0.47..+0.58) AND real "
+              "measured EM current (+0.64) on 45nm aes/ibex; fanout/density need no "
+              "extraction. Mature-node only (fails at 7nm: IR becomes PDN-resistance-bound)")
 EVIDENCE_TIER = "measured_proxy"
 
 

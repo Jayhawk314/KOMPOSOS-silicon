@@ -261,6 +261,29 @@ generalizes across technology nodes. **It does NOT.**
 - This is the system working as intended: it falsified an over-broad claim with real
   measured data and a clean control, and narrowed the product to where it actually holds.
 
+## 2026-06-20 (later) — measured-EM lift (edge #2 done) + honest system audit
+
+**System audit (user asked):** the reliability PRODUCT (Phases 1-7) imports only
+`core.category` + `core.honesty_gate`. PRONOIA is touched by one older file
+(`material_bridge.py`), NOT the product. ~50k+ lines of math (oracle/geometry/zfc/
+categorical/operadum/cog/hott/cubical/game) are DORMANT relative to the product. Honest
+read: the proven value is the DISCIPLINE (receipts/grounding) + the materials↔layout
+bridge, not the exotic math. Forcing dormant engines in = cargo-culting. Rule: only wire a
+dormant engine in if it passes a real measured test like everything else. "Meaningful" =
+built on a validated step AND checkable against real data (why the 7nm swap test was moot —
+the find step failed there).
+
+**Edge #2 — measured EM (done):** turning measured EM current into current-DENSITY needs
+per-segment wire widths the report lacks (high-current segments are wide PDN straps; min-
+width grossly overestimates). So instead validated EM *detection* directly: new
+`em_scoreboard.py` tests whether structure predicts the REAL measured EM current (OpenROAD
+`analyze_power_grid -enable_em` per-segment current, binned to tiles). **PASS on 45nm aes:
+density +0.638, demand/fanout +0.593, clean control.** The EM hotspot detection is now
+MEASURED-validated, not just Black's-eq estimated — lifts the EM find-side toward measured.
+Same 45nm-node caveat as IR (PDN-delivery-structured). `tests/test_silicon_em_scoreboard.py`
+(2). Updated hotspot VALIDATION receipt (now cites IR +0.5 AND EM +0.64).
+**Edges #1 (sub-7nm swaps) and #3 (real ML tool thru trust gate) remain not done.**
+
 ---
 
 ## 2026-06-20 — #3 measured tier: OpenSTA toolchain BLOCKED (host), ingestion proven
