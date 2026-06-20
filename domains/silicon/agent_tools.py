@@ -66,6 +66,8 @@ MANIFEST = {
     "operad": "N-ary net operations and graph-projection assumptions.",
     "crosswalk": "Gate-Verilog to DEF identity matches and mismatches.",
     "tiles": "Gates->tiles left Kan aggregation + tile-level SPEF telemetry score.",
+    "irdrop": "IR-drop hotspot tiles (current-demand proxy; not a PDN sim).",
+    "emrisk": "Electromigration-risk nets + interconnect metal proposal (gated).",
     "cohomology": "Exact H0/H1 of justified cross-artifact calibrations.",
     "ledger": "Evidence-tiered waste ledger + action portfolio.",
     "interface": "Material interface verdict for A B (physics -> COG -> HonestyGate).",
@@ -142,6 +144,46 @@ def cmd_tiles(args) -> None:
           grid=[args.nx, args.ny], n_tiles=len(cw.tiles),
           skipped_unplaced=len(cw.skipped_unplaced),
           score=sc.to_dict(), tiles=cw.to_dict()["tiles"])
+
+
+def cmd_irdrop(args) -> None:
+    from .tiles import build_tile_crosswalk
+    from .ir_drop import ir_drop_hotspots
+    b = _bridge(args)
+    cw = build_tile_crosswalk(b, nx=args.nx, ny=args.ny)
+    tiles = ir_drop_hotspots(cw)
+    worst = tiles[0] if tiles else None
+    _emit("irdrop",
+          (f"Top IR-drop hotspot {worst.tile}: {worst.current_demand_pf} pF switching "
+           f"demand" if worst else "No placed tiles."),
+          f"{b.name}: tile current-demand proxy (SPEF via gates->tiles Kan). "
+          f"NOT a simulated PDN/IR voltage drop.",
+          grid=[args.nx, args.ny],
+          hotspots=[t.__dict__ for t in tiles[:args.top]])
+
+
+def cmd_emrisk(args) -> None:
+    from .ir_drop import em_risk_nets
+    b = _bridge(args)
+    risks = em_risk_nets(b, top_recommend=args.top)
+    rows = []
+    for r in risks[:args.top]:
+        rec = r.recommendation
+        rows.append({
+            "net": r.net, "current_demand": r.current_demand, "severity": r.severity,
+            "fanout": r.fanout, "cap_pf": r.cap_pf,
+            "recommended": rec.recommended if rec else None,
+            "status": rec.status if rec else None,
+            "proposals": [{"metal": p.metal, "score": p.score,
+                           "em_resistance": p.em_resistance, "conductivity": p.conductivity}
+                          for p in (rec.proposals[:3] if rec else [])]})
+    worst = rows[0] if rows else None
+    _emit("emrisk",
+          (f"Worst EM-risk net {worst['net']} (severity {worst['severity']}) -> "
+           f"recommend {worst['recommended']}" if worst else "No EM-risk nets."),
+          f"{b.name}: EM current-demand proxy + interconnect material bridge "
+          f"(HonestyGate-gated). Current is a SPEF proxy, not measured.",
+          em_nets=rows)
 
 
 def cmd_ledger(args) -> None:
@@ -387,6 +429,14 @@ def build_parser() -> argparse.ArgumentParser:
     t = sub.add_parser("tiles")
     t.add_argument("--nx", type=int, default=8); t.add_argument("--ny", type=int, default=8)
     t.set_defaults(func=cmd_tiles)
+
+    ir = sub.add_parser("irdrop")
+    ir.add_argument("--nx", type=int, default=8); ir.add_argument("--ny", type=int, default=8)
+    ir.add_argument("--top", type=int, default=5)
+    ir.set_defaults(func=cmd_irdrop)
+
+    em = sub.add_parser("emrisk"); em.add_argument("--top", type=int, default=5)
+    em.set_defaults(func=cmd_emrisk)
     sub.add_parser("cohomology").set_defaults(func=cmd_cohomology)
     sub.add_parser("ledger").set_defaults(func=cmd_ledger)
 

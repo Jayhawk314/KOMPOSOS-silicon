@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-06-20 — IR-drop / current-density + interconnect material bridge ✅
+
+Started the next plan item (allowed now that tile Kan conservation laws pass).
+- `domains/silicon/ir_drop.py` — honest current-DEMAND proxies (no PDN sim):
+  per-tile switching-cap hotspots (from the gates->tiles aggregation) and per-net EM
+  current-demand (cap x fanout). High-EM nets are handed to the material bridge.
+  Claims are `measured_proxy` (SPEF-extracted), never `measured`.
+- `domains/silicon/interconnect.py` — the layout<->materials loop: Cu/Al/W/Co/Ru/TaN
+  table (resistivity + EM activation energy), a severity-weighted EM-vs-resistance
+  ranking (`propose_interconnect`), and a HonestyGate-gated `recommend_interconnect`.
+  Cool nets keep Cu (conductivity); hot/high-current nets get W/Ru/Co (EM Ea).
+- Wired into `build_waste_ledger(power_crosswalk=...)` and added `irdrop`/`emrisk` CLI.
+- `tests/test_silicon_ir_drop.py` — 8 tests (tradeoff, gated recommendation, proxy-tier
+  honesty, CLI). Real-data sanity: worst EM net on sample is `n_bus` (severity 1.0)->W.
+- **Scope boundary held:** SPEF is routing telemetry, so this is current *demand*, not a
+  simulated voltage drop; a real OpenROAD/Voltus PDN report is the `measured` upgrade
+  (deferred). Remaining plan item: GenerativeLoop integration of verified before/after fixes.
+
+---
+
 ## 2026-06-20 — Gates-to-tiles Kan extension RESOLVED ✅ (resumed from handoff)
 
 Picked up the partial handoff below; double-checked the baseline (214 passing) and finished it.

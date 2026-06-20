@@ -239,7 +239,7 @@ def claims_from_sta(sta_report) -> List[WasteClaim]:
 
 def build_waste_ledger(layout_analysis=None, bridge=None,
                        stack_analyses: Optional[Iterable] = None,
-                       sta_report=None) -> WasteLedger:
+                       sta_report=None, power_crosswalk=None) -> WasteLedger:
     claims: List[WasteClaim] = []
     if layout_analysis is not None and bridge is not None:
         claims.extend(claims_from_layout(layout_analysis, bridge))
@@ -247,6 +247,9 @@ def build_waste_ledger(layout_analysis=None, bridge=None,
         claims.extend(claims_from_stack(sa))
     if sta_report is not None:
         claims.extend(claims_from_sta(sta_report))
+    if power_crosswalk is not None and bridge is not None:
+        from .ir_drop import claims_from_power
+        claims.extend(claims_from_power(power_crosswalk, bridge))
     return WasteLedger(claims=claims)
 
 
