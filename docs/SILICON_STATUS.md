@@ -144,8 +144,23 @@ but NOT timing criticality (≈0)** — load ≠ timing. Reproducer + hashes:
 Exit condition **met**: every timing claim traces to the exact report, netlist, library,
 and constraints, and the CLI now shows which structural signals predict real critical
 nets (curvature weakly, drive-strength most but partly as an optimization artifact;
-fanout not at all). Next: more designs/clocks for stability, and placement-aware timing
-predictors that aren't synthesis outputs.
+fanout not at all).
+
+**Self-minted layout + contrast (2026-06-20).** Ran the **full ORFS RTL→GDSII flow**
+(Yosys + OpenROAD 26Q2) on `gcd_nangate45` — the long-deferred "mint our own layout"
+capability, now working. Produced `6_final.def/.v/.spef/.sdc/.gds`. STA on the
+self-minted, routed design (clock tightened 0.46→0.40 ns): 42/53 violations, 177
+critical nets mapped, `status: measured`. **Scoreboard FAILS** here — every predictor
+|ρ|<0.15 (best sink_area +0.061, shuffle −0.019). Root cause is real and important: the
+timing-driven flow **equalizes slack** (violating slacks cluster to stdev 0.010 ns), so
+the criticality variance a cheap predictor needs is gone. The `45_gcd` PASS held only
+because that downloaded layout was *less* slack-balanced. **Honest verdict: structural
+triage predicts timing criticality on un-converged layouts but is falsified on a cleanly
+optimized one** — the measured receipt catches a proposal that would have over-claimed.
+Reproducer: `domains/silicon/sta_flows/orfs_gcd_*`.
+
+Next: more designs/clock points for stability; placement-aware timing predictors that
+aren't synthesis outputs; feed the self-minting flow more designs to build a labeled set.
 
 ## Advanced roadmap after STA
 

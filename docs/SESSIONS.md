@@ -60,7 +60,30 @@ predictors that aren't synthesis outputs; or run the full ORFS gcd flow to also 
 self-minted DEF (the long-deferred "mint our own layout" capability — now unblocked
 since OpenROAD works).
 
-**Honest boundary:** this is real EDA-workflow ground truth (tool output + hashed design
+**Then — self-minted our own layout (full ORFS flow) + a falsifying contrast ✅**
+Ran the **full ORFS RTL→GDSII flow** (Yosys 0.64 synth → floorplan → place → CTS →
+route → finish; OpenROAD 26Q2) on `gcd_nangate45` — the long-deferred "mint our own
+layout" capability, now unblocked. Gotcha: source `env.sh` under **`bash -l`** (not
+`sh`); the openroad/yosys binaries are exposed by env.sh, not on the default PATH.
+Outputs in `data/orfs_gcd/results/base/`: `6_final.def/.v/.spef/.sdc/.gds` + odb + the
+full report set (incl. IR-drop/congestion webp). 1065 placed+routed cells; flow met
+timing at the edge (worst slack +0.01 ns @ 0.46 ns, fmax 2254 MHz).
+- STA on the self-minted routed design (tightened 0.46→0.40 ns): 53 paths, **42
+  violations**, **177 critical nets mapped**, `status: measured`.
+- **Scoreboard FAILS** on the self-minted design: every predictor |ρ|<0.15 (best
+  sink_area +0.061, shuffle −0.019). NOT a bug — the violating slacks cluster tightly
+  (worst −0.0396, all in [−0.040,−0.009], **stdev 0.010 ns**). **The timing-driven flow
+  equalizes slack, erasing the structural signal.** The `45_gcd` PASS (+0.34) held only
+  because that downloaded layout was less slack-balanced.
+- **Important honest verdict:** structural triage predicts timing criticality on
+  *un-converged* layouts but is **falsified on a cleanly optimized one**. This is the
+  proposal-vs-verification discipline paying off live: the structural proposal would
+  have over-claimed; the measured STA receipt caught it. Strengthens "carry a receipt."
+- Reproducer committed: `domains/silicon/sta_flows/orfs_gcd.sdc` + `orfs_gcd_sta.tcl` +
+  README section (commands, result table, hashes). Self-minted artifacts under
+  `data/orfs_gcd/` (gitignored). Docs + memory updated.
+
+**Honest boundary:** all real EDA-workflow ground truth (tool output + hashed design
 context), not fabricated-silicon lab data.
 
 ---

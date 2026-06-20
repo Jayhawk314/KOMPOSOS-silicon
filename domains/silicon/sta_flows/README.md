@@ -141,9 +141,79 @@ d2be5422…b0b83  45_gcd.report_checks.txt   (OpenROAD STA, 48 violations)
 caa4e9b4…d43a7   Nangate45.lef              (tech+cell LEF)
 ```
 
+## Self-minted layout — full ORFS RTL→GDSII flow (`orfs_gcd`)
+
+The two runs above use layouts we *downloaded*. This one we **mint ourselves**: the full
+open RTL→GDSII flow (Yosys synth → floorplan → place → CTS → route → finish) on
+`gcd_nangate45`, the project's long-deferred "mint our own layout" capability (the
+plan's "EIA-930 download" equivalent), now unblocked since Docker/OpenROAD work.
+
+```bash
+docker pull openroad/orfs:latest    # OpenROAD 26Q2 + Yosys 0.64, bundles nangate45 platform
+OUT="$PWD/domains/silicon/data/orfs_gcd"; mkdir -p "$OUT"
+# run the flow (NOTE: env.sh works under bash -l, NOT sh; it sets PATH for openroad/yosys)
+docker run --rm -v "$OUT:/work" --entrypoint bash openroad/orfs:latest -lc '
+  source /OpenROAD-flow-scripts/env.sh >/dev/null 2>&1
+  cd /OpenROAD-flow-scripts/flow
+  make DESIGN_CONFIG=designs/nangate45/gcd/config.mk
+  cp -r results/nangate45/gcd/* /work/results/  # 6_final.def/.v/.spef/.sdc/.gds + odb
+  cp -r reports/nangate45/gcd/* /work/reports/'
+# then STA on the self-minted, routed layout (see orfs_gcd_sta.tcl) and score it:
+cp domains/silicon/sta_flows/orfs_gcd.sdc domains/silicon/sta_flows/orfs_gcd_sta.tcl "$OUT"/
+docker run --rm -v "$OUT:/work" --entrypoint bash openroad/orfs:latest -lc '
+  source /OpenROAD-flow-scripts/env.sh >/dev/null 2>&1
+  cp /OpenROAD-flow-scripts/flow/platforms/nangate45/lib/NangateOpenCellLibrary_typical.lib /work/
+  openroad -no_init -exit /work/orfs_gcd_sta.tcl > /work/6_final.report_checks.txt'
+
+python -m domains.silicon.agent_tools \
+  --def $OUT/results/base/6_final.def --spef $OUT/results/base/6_final.spef \
+  --lef domains/silicon/data/openlane/Nangate45.lef \
+  --sta $OUT/6_final.report_checks.txt --sta-source tool \
+  --sta-netlist $OUT/results/base/6_final.v \
+  --sta-liberty $OUT/NangateOpenCellLibrary_typical.lib --sta-sdc $OUT/orfs_gcd.sdc \
+  score
+```
+
+### Result (OpenROAD 26Q2, self-minted, clock 0.40 ns, 2026-06-20) — the scoreboard FAILS
+
+Self-minted gcd: 1065 placed+routed cells; the flow met timing at 0.46 ns *at the edge*
+(worst slack +0.01 ns, fmax 2254 MHz). At a tightened 0.40 ns: 42/53 violating
+endpoints, **177 critical nets mapped**, `status: measured`. But the violating slacks
+are **tightly clustered** — worst −0.0396 ns, all within [−0.040, −0.009], **stdev
+0.010 ns**. `score` vs `sta_negative_slack` (621 nets): **FAIL**, every predictor
+|ρ|<0.15 (best `sink_area` +0.061, shuffle −0.019).
+
+| Predictor | neg_curvature | degree | fanout | wirelength | driver_area | sink_area |
+|---|---:|---:|---:|---:|---:|---:|
+| ρ | −0.100 | −0.066 | −0.141 | +0.021 | +0.016 | +0.061 |
+
+**Why this matters (the honest, important finding):** timing-driven place/route/resize
+**deliberately equalizes slack** across paths — that is what convergence *means*. On a
+cleanly optimized design the criticality variance collapses (stdev 0.010 ns), so there
+is no structural signal left for a cheap predictor to exploit. The +0.34 we saw on the
+downloaded `45_gcd` held because that layout was *less* slack-balanced. So:
+**structural triage predicts timing criticality only on un-converged layouts; on a
+fully optimized one it is falsified.** This is exactly why the architecture forbids a
+proposal from standing in for a verdict — here the structural proposal would have
+over-claimed, and the measured STA receipt caught it. The receipt earned its keep.
+
+### Artifact hashes (sha256)
+
+```
+37c22362…410ccb  6_final.report_checks.txt   (OpenROAD STA, self-minted, 42 violations)
+a01f4463…0f6601  6_final.def                  (self-minted routed layout)
+0f9971dd…7902e   6_final.v                    (self-minted gate netlist)
+19c1add7…c244ed  6_final.spef                 (self-minted parasitics)
+8d540a4d…4e9b1   NangateOpenCellLibrary_typical.lib  (platform Liberty used)
+4a935f17…61bf57  orfs_gcd.sdc                 (constraints, 0.40 ns clock)
+```
+
 ## Honest boundary
 
 This is **EDA-workflow ground truth** (real tool output with full, hashed design
-context), not a lab measurement of fabricated silicon. Both designs above are real and
-fully attested; the `45_gcd` run closes the structural-vs-real-timing cross-mapping the
-project was built to test.
+context), not a lab measurement of fabricated silicon. All three designs are real and
+fully attested. Together they give the honest verdict the project was built to test:
+structural triage shows a **modest** correlation with measured timing on a less-balanced
+layout (`45_gcd`, driver_area +0.34) and is **falsified** on a cleanly optimized one
+(`orfs_gcd`, all |ρ|<0.15) — because timing-driven optimization erases the structural
+signal. Measured verification is what distinguishes the two cases.
