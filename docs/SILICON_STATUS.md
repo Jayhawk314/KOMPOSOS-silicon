@@ -1,6 +1,6 @@
 # KOMPOSOS-V Silicon Co-Design Status
 
-> Current as of 2026-06-20 (America/Los_Angeles). This is the concise status and
+> Current as of 2026-06-20 (America/Los_Angeles), updated after the real-STA run. This is the concise status and
 > handoff document. `docs/SILICON_PLAN.md` remains the architectural plan,
 > `docs/SESSIONS.md` the chronological log, and `docs/SILICON_WHITEPAPER.md` the
 > methods/findings/directions explainer (the math, the results, and the pivots).
@@ -40,7 +40,7 @@ real STA output and its design context have not been ingested.
 | Waste ledger + agent CLI | Complete working tree | Evidence tiers, provenance, portfolio, exports, LEF/STA/score commands | Real STA artifacts are still absent |
 | SPEF scoreboard | Complete and committed | Real layouts beat a shuffled control | Validates screening against extracted capacitance only |
 | LEF ingestion | Working tree | Nangate45 parsing, real output-pin direction tests, scoreboard delta | Area features are weak; direction correction is the main gain |
-| STA ingestion | Code complete; parser verified vs real OpenSTA output | Real grammar variants, source/context hashes, critical-net mapping, ledger + scoreboard tests; `parse_sta` verified on the project's `mcmm3.ok` golden (multi-corner) + committed real-format regression test | `measured` tier still empty on a real design: local OpenSTA generation is BLOCKED by a host WSL fault (services up, `wsl` CLI hangs; Docker engine depends on it). Ingestion is ready; needs WSL revived to run a real report |
+| STA ingestion | **Complete — real measured-tier report ingested (2026-06-20)** | Real grammar variants, source/context hashes, critical-net mapping, ledger + scoreboard tests; `parse_sta` verified on the project's `mcmm3.ok` golden (multi-corner) + committed real-format regression test. **Ran real OpenSTA 2.6.2 (`openroad/opensta` image) on `gcd_sky130hd`: 53 paths, `is_evidence=True`, CLI `sta` → `status: "measured"` with hashed netlist/Liberty/SDC receipts. Relaxed clock (5 ns) meets timing (+0.065 ns); tight clock (1 ns) yields 52/53 real violations (−3.94 ns). Reproducer: `domains/silicon/sta_flows/`** | `measured` tier is now populated on a real design. WSL/Docker revived 2026-06-20. Remaining: a design for which we hold BOTH a DEF and a matched `report_checks`, to run the structural-triage vs real-timing scoreboard (gcd_sky130hd ships no DEF) |
 | Full test suite | Passing | `244 passed` on 2026-06-20 (214 baseline + 8 tiles + 8 IR-drop/EM + 6 fix-loop + 8 scale) | Real-data tests skip when local gitignored files are absent |
 
 Committed work currently ends at the SPEF scoreboard commit (`4e736ec`). LEF/STA,
@@ -57,6 +57,19 @@ Spearman rho >= 0.30 with an absolute shuffled-control rho < 0.20.
 | real `gcd` | 371 | +0.159 | +0.563 | +0.309 | 0.80 | +0.143 |
 | real `45_gcd`, no LEF | 272 | +0.131 | +0.582 | +0.243 | 0.80 | +0.088 |
 | real `45_gcd`, with LEF | 274 | +0.287 | +0.584 | +0.438 | 0.80 | -0.025 |
+
+**Against real STA timing** (target = per-net negative slack, not SPEF cap), `45_gcd`
++LEF, OpenROAD 26Q2 @ 0.3 ns clock, 308 nets / 106 on violating paths — **PASS**, shuffle
++0.020:
+
+| Predictor | driver_area | sink_area | neg_curvature | degree | fanout | wirelength |
+|---|---:|---:|---:|---:|---:|---:|
+| Spearman ρ | **+0.343** | +0.246 | +0.160 | +0.111 | −0.037 | −0.003 |
+
+The predictor ranking **flips** between targets: fanout dominates capacitance but is ~0
+for timing; cell drive-strength dominates timing (partly a synthesis-optimization
+artifact) but is not the cap leader. Capacitance and timing-criticality are different
+physical questions and want different structural signals.
 
 The honest conclusion is narrower than "geometry predicts congestion." Fanout
 is the strongest baseline. LEF nearly doubled the curvature and wirelength
@@ -106,18 +119,33 @@ two-view chains do not manufacture obstructions.
 
 ## Remaining milestone: real STA validation
 
-The ingestion and scoring path is complete. The remaining work requires external
-artifacts, not more parser scaffolding:
+**Measured tier populated (2026-06-20).** Ran real OpenSTA 2.6.2 on the `gcd_sky130hd`
+design bundled in the `openroad/opensta` image. The CLI `sta` command reports
+`status: "measured"` with hashed receipts for the report, gate netlist, Liberty, and
+SDC. Both a passing (5 ns clock, +0.065 ns) and a stressed (1 ns clock, 52/53
+violations, −3.94 ns) report flow through as evidence. Reproducer + hashes:
+`domains/silicon/sta_flows/`.
 
-1. Generate or obtain `report_checks`, gate netlist, Liberty, and SDC files for the
-   same `45_gcd` layout and record the actual OpenSTA/OpenROAD version.
-2. Run `sta`, `ledger`, and `score` with `--sta-source tool`, `--sta-netlist`,
-   `--sta-liberty`, and `--sta-sdc` so all context receipts are hashed.
-3. Record the timing scoreboard result whether it passes or fails. The local fixture
-   currently gives negative/zero structural correlations and is explicitly non-evidence.
+What is **done**:
+1. ✅ Real `report_checks` + gate netlist + Liberty + SDC obtained (OpenSTA 2.6.2).
+2. ✅ `sta` run with `--sta-source tool` + `--sta-netlist/-liberty/-sdc`; all receipts hashed.
 
-Exit condition: the CLI shows which structural signals predict real critical nets,
-and every timing claim traces to the exact report, netlist, library, and constraints.
+**Cross-mapping scoreboard DONE (2026-06-20).** Ran **OpenROAD 26Q2** STA *directly on
+our held `45_gcd.def`* (placed Nangate45 gcd), so the report instances match the DEF by
+construction. Clock 0.3 ns → 48/53 violating endpoints, worst −0.7169 ns, `status:
+measured`; **106 critical nets mapped onto DEF nets**. `score` vs `sta_negative_slack`
+(308 nets) **PASSes**: best predictor **driver_area ρ=+0.343**, shuffle control +0.020.
+Honest reading: signal real but modest, `prec@10≈0` (no sharp top-k pinpointing);
+`driver_area` is partly circular (synthesis upsizes critical drivers), purest structural
+signal is `neg_curvature` +0.16; **`fanout` predicts SPEF capacitance (+0.57 earlier)
+but NOT timing criticality (≈0)** — load ≠ timing. Reproducer + hashes:
+`domains/silicon/sta_flows/` (45_gcd flow + README).
+
+Exit condition **met**: every timing claim traces to the exact report, netlist, library,
+and constraints, and the CLI now shows which structural signals predict real critical
+nets (curvature weakly, drive-strength most but partly as an optimization artifact;
+fanout not at all). Next: more designs/clocks for stability, and placement-aware timing
+predictors that aren't synthesis outputs.
 
 ## Advanced roadmap after STA
 

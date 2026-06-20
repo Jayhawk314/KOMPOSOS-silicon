@@ -5,6 +5,66 @@
 
 ---
 
+## 2026-06-20 (later) — #3 measured tier UNBLOCKED: real OpenSTA report ingested ✅
+
+The host WSL/Docker fault from the earlier entry is **resolved** — user updated Docker;
+WSL CLI now responds, Ubuntu boots, `docker ps` clean (server 29.5.3). The prior
+"blocked" state was the `docker-desktop` WSL distro being stopped under a dead `wsl` CLI.
+
+**Ran real OpenSTA and lit up the `measured` tier on a real design:**
+- Pulled `openroad/opensta:latest` (OpenSTA **2.6.2**). It bundles a complete, self-
+  consistent `gcd_sky130hd` design under `/OpenSTA/examples` (gate `.v` + `.sdc` +
+  sky130 Liberty + SPEF). `sta` binary is at `/OpenSTA/app/sta` (image entrypoint), not
+  on PATH; `MSYS_NO_PATHCONV=1` needed so Git Bash doesn't mangle the `/work` mount.
+- Ran `report_checks` two ways on the SAME real design:
+  - relaxed clock (5 ns): **meets timing**, worst slack **+0.0648 ns**, 0/53 violations.
+  - tight clock (1 ns, 5×): **52/53 real violations**, worst **−3.9352 ns**.
+- Both parse to 53 paths via `sta.py` and qualify `is_evidence=True`. CLI
+  `agent_tools … --sta-source tool --sta-netlist/-liberty/-sdc sta` → **`status:
+  "measured"`** with hashed receipts for report + netlist + Liberty + SDC. First real
+  measured-tier timing claim in the project.
+- Committed reproducer + provenance/hashes: `domains/silicon/sta_flows/` (flows +
+  README). Report `.txt` + staged design files live under `domains/silicon/data/sta_gcd/`
+  (gitignored, regenerable).
+
+**Then — closed the cross-mapping loop (structural triage vs REAL timing) ✅**
+The remaining piece was a design where we hold BOTH a DEF and a matched report. Got it
+the light way: **run OpenROAD STA directly on our held `45_gcd.def`** (placed Nangate45
+gcd) so report instances == DEF instances by construction — no synthesis, no name
+guessing.
+- Pulled `openroad/orfs:latest` (**OpenROAD 26Q2**). Binary at
+  `/OpenROAD-flow-scripts/tools/install/OpenROAD/bin/openroad`. Gotcha: **do NOT source
+  ORFS `env.sh`** — it `exit`s the shell; call the binary directly as the entrypoint.
+- Inputs we already had: `45_gcd.def` + `45_gcd.spefok` + `Nangate45.lef` (merged
+  tech+cell, 22 layers/135 macros) + nangate45 Liberty copied from the opensta image.
+  Constraints `45_gcd.sdc` @ 0.3 ns clock (tight, to force violations).
+- `read_lef`+`read_liberty`+`read_def`+`read_spef`+`source sdc`+`report_checks` →
+  53 paths, **48 violating**, worst **−0.7169 ns**. CLI `sta` → `status: measured`,
+  **106 critical nets mapped onto DEF nets** (e.g. `dpath.a_lt_b$in1[1]`).
+- **Scoreboard vs real `sta_negative_slack` (308 nets): PASS.** Best **driver_area
+  ρ=+0.343**, shuffle control +0.020. neg_curvature +0.16, degree +0.11, **fanout −0.04**,
+  wirelength −0.00, sink_area +0.25. `prec@10≈0` for all.
+- **Honest findings:** (1) signal real but modest — monotone trend, no sharp top-k
+  pinpointing; (2) `driver_area` is partly circular (synthesis upsizes drivers on
+  critical paths — it's partly an *output* of timing opt), so the purest structural
+  signal is `neg_curvature` +0.16; (3) **fanout predicts SPEF capacitance (+0.57) but
+  NOT timing criticality (≈0)** — load and timing are different targets, and the
+  predictor ranking flips between them. Good falsifiable science.
+- Reproducer committed: `domains/silicon/sta_flows/` (`45_gcd_openroad_sta.tcl`,
+  `45_gcd.sdc`, README with commands + result tables + hashes). Reports/staged inputs
+  under `data/sta_45gcd/` (gitignored). Docs updated: `SILICON_STATUS.md` (STA row,
+  milestone, measured-results table) + memory.
+
+**Next ideas:** more designs/clock points for stability; placement-aware timing
+predictors that aren't synthesis outputs; or run the full ORFS gcd flow to also get a
+self-minted DEF (the long-deferred "mint our own layout" capability — now unblocked
+since OpenROAD works).
+
+**Honest boundary:** this is real EDA-workflow ground truth (tool output + hashed design
+context), not fabricated-silicon lab data.
+
+---
+
 ## 2026-06-20 — #3 measured tier: OpenSTA toolchain BLOCKED (host), ingestion proven
 
 Attempted the OpenSTA toolchain bring-up to light up the `measured` tier on a real design.
