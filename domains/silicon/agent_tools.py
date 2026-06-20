@@ -71,6 +71,7 @@ MANIFEST = {
     "fixloop": "Self-learning: compose+verify fixes; learned remediations become primitives.",
     "partition": "Scale: Fiedler-bisect into bounded regions; per-region corridors + seam nets.",
     "cohomology": "Exact H0/H1 of justified cross-artifact calibrations.",
+    "reliability": "Full find->fix->prove reliability co-design report (hotspots + proven actions + evidence ladder).",
     "ledger": "Evidence-tiered waste ledger + action portfolio.",
     "interface": "Material interface verdict for A B (physics -> COG -> HonestyGate).",
     "stack": "Analyze a named heterostructure stack (weakest interface).",
@@ -436,6 +437,24 @@ def cmd_whatif(args) -> None:
           blocks_remaining=len(kept_names))
 
 
+def cmd_reliability(args) -> None:
+    import os
+    from .reliability import assess_reliability
+    rep = assess_reliability(args.def_path, args.spef_path, args.lef_path,
+                             design=os.path.basename(args.def_path), top=args.top)
+    swaps = sum(f.action == "swap_interconnect" for f in rep.actions.fixes)
+    widens = sum(f.action == "widen_wire" for f in rep.actions.fixes)
+    rejects = sum(not f.keep for f in rep.actions.fixes)
+    _emit(
+        "reliability",
+        f"{len(rep.hotspots.tiles)} stress hotspot(s); actions: {swaps} metal-swap, "
+        f"{widens} widen, {rejects} reject. Every claim carries an evidence tier.",
+        (f"find->fix->prove on DEF={args.def_path}; hotspots validated vs real IR-drop "
+         f"(measured_proxy); actions {rep.actions.tier}; materials literature_value"),
+        report=rep.to_dict(),
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="domains.silicon.agent_tools")
     p.add_argument("--def", dest="def_path", default=SAMPLE_DEF)
@@ -485,6 +504,8 @@ def build_parser() -> argparse.ArgumentParser:
                     help="per-region parallelism: int or 'auto' (1 = sequential)")
     pp.set_defaults(func=cmd_partition)
     sub.add_parser("cohomology").set_defaults(func=cmd_cohomology)
+    rl = sub.add_parser("reliability"); rl.add_argument("--top", type=int, default=6)
+    rl.set_defaults(func=cmd_reliability)
     sub.add_parser("ledger").set_defaults(func=cmd_ledger)
 
     i = sub.add_parser("interface")

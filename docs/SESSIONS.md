@@ -199,6 +199,27 @@ proves BOTH sides of the fix, not one:
 - **Next (Phase 5):** productize — one CLI/portfolio that runs find→fix→prove on a layout
   and emits the receipt-backed reliability action portfolio.
 
+## 2026-06-20 (later) — Phase 5 DONE: productized. ALL FIVE PHASES COMPLETE ✅
+
+New `domains/silicon/reliability.py` + agent CLI `reliability` command = the product:
+one command on a real layout emits WHERE (validated hotspots) + WHAT (proven co-design
+actions) + WHY (the evidence ladder, every claim tiered). `assess_reliability()` composes
+Phase 2 hotspots + Phase 4 actions; `to_dict()` exposes the evidence_ladder
+(measured → measured_proxy → validated_hypothesis → literature_value).
+- CLI: `python -m domains.silicon.agent_tools --def .. --spef .. --lef .. reliability`
+  → JSON report (hotspots + fixes + tiers + provenance). (Fixed a missing `import os`.)
+- `tests/test_silicon_reliability.py` (2 tests); phase 1-5 sweep 19 pass.
+- Updated `docs/SILICON_FINDINGS.md` with "The product, built" section.
+
+**The reliability co-design wedge is real, end-to-end, tested, and honest.** The whole
+arc this session: timing-prediction falsified (the right way) → pivot → structure PREDICTS
+real IR-drop (measured win) → hotspot detector → materials grounded in cited data →
+find→fix→prove loop → one productized report. The differentiator is the evidence ladder:
+incumbents compute EM/IR; none connect stress to a grounded, PROVEN materials fix with a
+checkable receipt for every step. Possible next: more designs/nodes, real EM current-limit
+(Jmax) grounding for the swap branch, a sub-7nm design where local-interconnect swaps fire,
+or the trust-layer demo (wrap an external ML proposer behind the receipt gate).
+
 ---
 
 ## 2026-06-20 — #3 measured tier: OpenSTA toolchain BLOCKED (host), ingestion proven

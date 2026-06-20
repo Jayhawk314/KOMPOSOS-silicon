@@ -98,6 +98,34 @@ layer**: find where silicon will physically degrade (IR-drop/EM/thermal) with ch
 structure, fix it with grounded materials science, and prove every fix — on an engine that
 never lets a guess pose as a verified fact. Result 2 is the first proven brick of it.
 
+## The product, built (2026-06-20)
+
+The five-phase build turned the finding into a working wedge — the **reliability
+co-design layer**, one command on a real layout:
+
+```
+python -m domains.silicon.agent_tools --def <design>.def --spef <design>.spef \
+    --lef Nangate45.lef reliability
+```
+
+- **Phase 1** (`ir_scoreboard.py`) — structure predicts real OpenROAD IR-drop (+0.4..0.6,
+  measured on aes/ibex). The win that anchors everything.
+- **Phase 2** (`hotspot.py`) — the validated "find the problems" detector: rank stress
+  tiles + the EM-risk nets in them from the layout alone, carrying the Phase-1 receipt.
+- **Phase 3** (`materials_grounding.py`) — the "fix" side grounded in CITED data
+  (ASM/Smithells via the CHEM `metal_bridge`; Gall 2016); cross-validation flags
+  discrepancies; EM-robustness grounded in melting point (Spearman = +1.00).
+- **Phase 4** (`codesign_loop.py`) — find→fix→PROVE: a metal swap's EM gain (Black's eq)
+  AND resistance cost are both quantified; kept only if it nets out on the net's real
+  length; gated by HonestyGate. On real designs it correctly redirects long-net swaps to
+  widening — a genuine decision, not a rubber stamp.
+- **Phase 5** (`reliability.py`) — one report: WHERE (validated hotspots) + WHAT (proven
+  actions) + WHY (the evidence ladder, every claim tiered measured → measured_proxy →
+  validated_hypothesis → literature_value).
+
+The differentiator is the evidence ladder itself: incumbents compute EM/IR; none connect
+that stress to a grounded, *proven* materials fix with a checkable receipt for every step.
+
 ## Reproduce / audit
 
 - Timing: `domains/silicon/sta_flows/` (flows, SDCs, hashes; OpenSTA + OpenROAD).
