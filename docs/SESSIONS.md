@@ -139,6 +139,24 @@ a 5-phase plan (task list #1–#5). **Phase 1 done, and it's a measured WIN.**
 - **Next (Phase 2):** fold load + power into one structural hotspot detector; then Phase 3
   ground the materials engine; Phase 4 close the find→fix→prove co-design loop.
 
+## 2026-06-20 (later) — Phase 2 DONE: unified hotspot detector (validated)
+
+- **Combine experiment (honest):** a rank-sum "stress" of cap+fanout+density does NOT beat
+  the best single signal (aes +0.598 vs fanout +0.597; ibex +0.456 vs cap +0.478). The
+  signals are redundant (all measure "how busy is this tile"). So the detector uses a
+  simple validated metric, not a fancy blend — and the FREE signals (fanout/density) are
+  enough.
+- **New module `domains/silicon/hotspot.py`:** `predict_hotspots(def, spef, lef)` ranks the
+  worst physical-stress tiles from the LAYOUT ALONE (no power sim) by current-demand
+  (cap x fanout), names the dominant EM-risk nets per tile, and carries the Phase-1
+  measured receipt (tier=measured_proxy). This is the "find the problems" front-end.
+- **Validated the detector's exact metric:** added `demand`=cap×fanout to `ir_scoreboard`;
+  it predicts real IR-drop at +0.581 (aes) / +0.473 (ibex), clean controls — so the
+  ranking isn't a hollow guess, it's a measured-correlated predictor.
+- `tests/test_silicon_hotspot.py` (+ ir_scoreboard demand) — 6 tests pass.
+- **Next (Phase 3):** ground the materials engine (real Cu/W/Ru/Co properties) so the
+  "fix" half of co-design carries real receipts; then Phase 4 closes find→fix→prove.
+
 ---
 
 ## 2026-06-20 — #3 measured tier: OpenSTA toolchain BLOCKED (host), ingestion proven

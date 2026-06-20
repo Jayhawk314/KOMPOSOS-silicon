@@ -27,7 +27,12 @@ from typing import Dict, List, Tuple
 
 from .netlist_bridge import NetlistBridge
 
-PROXIES = ("cap", "fanout", "density", "area")
+# Single structural proxies, plus "stress" = the unified detector: a rank-normalized
+# sum of the three positive current-demand signals (cap + fanout + density). area is
+# excluded because it anti-correlates with IR drop on real designs.
+SINGLE = ("cap", "fanout", "density", "area", "demand")
+STRESS_TERMS = ("cap", "fanout", "density")
+PROXIES = SINGLE + ("stress",)
 PASS_RHO = 0.30
 CONTROL_MAX = 0.20
 
@@ -122,14 +127,17 @@ def ir_scoreboard(def_path: str, spef_path: str, lef_path: str, voltage_path: st
     bridge.load()
     inst_cap: Dict[str, float] = {}
     inst_fanout: Dict[str, float] = {}
+    inst_demand: Dict[str, float] = {}        # cap x fanout — the hotspot detector's metric
     active = set()
     for net in bridge.nets:
         if not bridge._is_signal(net):
             continue
         cap = bridge.caps.get(net.name, 0.0)
+        fanout = len(net.conns) - 1
         drv = net.conns[bridge._driver_index(net)][0]
         inst_cap[drv] = inst_cap.get(drv, 0.0) + cap
-        inst_fanout[drv] = inst_fanout.get(drv, 0.0) + (len(net.conns) - 1)
+        inst_fanout[drv] = inst_fanout.get(drv, 0.0) + fanout
+        inst_demand[drv] = inst_demand.get(drv, 0.0) + cap * fanout
         active.add(drv)
 
     xs = [p[0] for p in pos.values()]; ys = [p[1] for p in pos.values()]
@@ -144,16 +152,28 @@ def ir_scoreboard(def_path: str, spef_path: str, lef_path: str, voltage_path: st
     for inst, (x, y) in pos.items():
         d = tiles.setdefault(tile_of(x, y),
                              {"ir": 0.0, "n": 0, "cap": 0.0, "fanout": 0.0,
-                              "area": 0.0, "density": 0.0})
+                              "area": 0.0, "density": 0.0, "demand": 0.0})
         d["ir"] += drop.get(inst, 0.0); d["n"] += 1
         d["cap"] += inst_cap.get(inst, 0.0)
         d["fanout"] += inst_fanout.get(inst, 0.0)
+        d["demand"] += inst_demand.get(inst, 0.0)
         d["area"] += bridge.cell_area(inst)
         if inst in active:
             d["density"] += 1
 
     rows = [t for t in tiles.values() if t["n"]]
     real = [t["ir"] / t["n"] for t in rows]                 # mean IR drop per tile
+
+    # Unified "stress" detector: rank-normalize each positive signal across tiles and sum.
+    # Rank-sum is scale-free, so no signal dominates by units.
+    stress = [0.0] * len(rows)
+    for term in STRESS_TERMS:
+        r = _ranks([t[term] for t in rows])
+        for i, rank in enumerate(r):
+            stress[i] += rank
+    for i, t in enumerate(rows):
+        t["stress"] = stress[i]
+
     rep = IRScoreReport(design=design, n_tiles=len(rows), grid=grid, supply_v=supply_v,
                         worst_drop_v=max(drop.values()) if drop else 0.0)
     shuffled = list(real); random.Random(seed).shuffle(shuffled)
