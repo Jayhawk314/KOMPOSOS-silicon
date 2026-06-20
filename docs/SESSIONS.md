@@ -86,6 +86,33 @@ timing at the edge (worst slack +0.01 ns @ 0.46 ns, fmax 2254 MHz).
 **Honest boundary:** all real EDA-workflow ground truth (tool output + hashed design
 context), not fabricated-silicon lab data.
 
+## 2026-06-20 (later) — minted aes+ibex, ran early-stage test, REASSESSED & STOPPED
+
+Pushed the timing-prediction question to a verdict, then stopped to reassess honestly
+(user's call). Wrote `docs/SILICON_FINDINGS.md` — the plain-English reckoning.
+
+- **Minted `aes` + `ibex`** with the full ORFS flow (each ~32k cells; resumable via
+  host-mounted ORFS output dirs; ~7 min each). Scored structural triage vs real STA:
+  **both FAIL** — aes best driver_area +0.15, ibex best sink_area +0.24 (curvature on
+  32k nodes via effres ~8.5 min each). `prec@10 = 0` on both.
+- **Early-stage experiment** (the one escape hatch): does structure predict timing
+  *before* the optimizer flattens it? Took self-minted `gcd` at `3_2_place_iop`
+  (placed, pre-timing-opt), estimated parasitics, ran STA at 0.40 and 0.30 ns. **Both
+  FAIL** (driver_area +0.22 / +0.19, `prec@10 = 0`). Escape hatch closed.
+- **Complete verdict (6 tests):** only the downloaded, loosely-optimized `45_gcd`
+  passed (+0.34); every design we minted+optimized ourselves failed; the early/un-opt
+  stage failed too; `prec@10 = 0` in ALL six — the guess never pinpoints the worst nets;
+  the curvature math (the system's core "structure" signal) is the *weakest* (≤0 for
+  timing everywhere). **Root cause is fundamental: timing-driven optimization equalizes
+  slack (self-mint gcd violating-slack stdev 0.010 ns), erasing the signal.**
+- **Conclusion:** cheap structural timing-prediction is a dead end as a product. What
+  *works* and is the real asset: the verification/receipt engine (it caught our own idea
+  over-claiming) + the real-silicon test harness. The unmet industry need is *trust* in
+  AI chip decisions, not a predictor — but whether that's a product is a market question,
+  not a coding one. **Set the predictor down; next decision is about users, not code.**
+- Reproducer: `domains/silicon/sta_flows/selfmint_sta.tcl` + `early_stage_sta.tcl`
+  (+ aes/ibex via the documented ORFS commands). Findings: `docs/SILICON_FINDINGS.md`.
+
 ---
 
 ## 2026-06-20 — #3 measured tier: OpenSTA toolchain BLOCKED (host), ingestion proven
