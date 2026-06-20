@@ -163,6 +163,26 @@ def test_analyze_partitioned_effres_default_matches_worker():
     assert pa.corridors and pa.corridors[0][3] < 0
 
 
+@pytest.mark.skipif(
+    not os.path.exists(os.path.join(os.path.dirname(SAMPLE_DEF), "..",
+                                    "data", "openlane", "ibex.def")),
+    reason="large ibex design not downloaded")
+def test_very_large_ibex_partition_scales():
+    """~30k-node real RISC-V core: spatial partition still bounds it (partition-only,
+    so the test stays fast; the full parallel run is in the partition benchmark)."""
+    data = os.path.join(os.path.dirname(SAMPLE_DEF), "..", "data", "openlane")
+    lef = os.path.join(data, "Nangate45.lef")
+    b = NetlistBridge(os.path.join(data, "ibex.def"),
+                      lef_path=lef if os.path.exists(lef) else None); b.load()
+    nodes = _nodes(b.category)
+    assert len(nodes) > 25000                       # bigger than AES
+    parts = partition_category(b.category, max_size=800)
+    covered = {n for p in parts for n in p.nodes}
+    assert covered == nodes                         # disjoint cover at 30k scale
+    assert max(p.size for p in parts) <= 800
+    assert len(parts) > 30
+
+
 def test_cli_partition_emits_bounded_regions(capsys):
     import json
     from domains.silicon import agent_tools

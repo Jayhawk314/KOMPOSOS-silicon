@@ -5,6 +5,19 @@
 
 ---
 
+## 2026-06-20 — Push to a bigger design: ibex (~30k nodes) ✅
+
+Pulled OpenROAD's `ibex.defok` (real RISC-V `ibex_core`, 34,184 components / 33,171 nets ->
+**29,522-node / 67,990-edge** graph — bigger than AES, which was mostly fill). Placed,
+Nangate45 (LEF we have). The scale path handles it: spatial partition -> 64 bounded regions;
+per-region effres **12.6s sequential -> 5.1s parallel (x2.5)**, identical results. Whole-graph
+is hopeless (30k x 30k dense pinv ~7GB; exact = many hours). `partition` benchmark now takes a
+DEF path arg / auto-picks the largest local design. Added a skip-if-absent ibex scale test
+(partition-only, disjoint cover at 30k, bounded regions). Confirms the partition+parallel
+approach generalizes past AES on a second, larger real core.
+
+---
+
 ## 2026-06-20 — Parallelize per-region analysis ✅
 
 The partition regions are independent, so run their curvature in parallel.

@@ -240,17 +240,22 @@ def analyze_partitioned(bridge, max_size: int = 1500,
 def main() -> None:
     """Benchmark sequential vs parallel per-region analysis (guarded for spawn)."""
     import os
+    import sys
     import time
     from .netlist_bridge import NetlistBridge, SAMPLE_DEF, SAMPLE_SPEF
 
     data = os.path.join(os.path.dirname(SAMPLE_DEF), "..", "data", "openlane")
-    aes = os.path.join(data, "aes.def")
-    if os.path.exists(aes):
-        lef = os.path.join(data, "Nangate45.lef")
-        b = NetlistBridge(aes, lef_path=lef if os.path.exists(lef) else None)
-        max_size = 800
-    else:
-        b = NetlistBridge(SAMPLE_DEF, SAMPLE_SPEF); max_size = 3
+    lef = os.path.join(data, "Nangate45.lef")
+    lef = lef if os.path.exists(lef) else None
+    if len(sys.argv) > 1:                                   # explicit DEF path
+        b = NetlistBridge(sys.argv[1], lef_path=lef); max_size = 800
+    else:                                                   # largest available, else sample
+        pick = next((os.path.join(data, f) for f in ("ibex.def", "aes.def")
+                     if os.path.exists(os.path.join(data, f))), None)
+        if pick:
+            b = NetlistBridge(pick, lef_path=lef); max_size = 800
+        else:
+            b = NetlistBridge(SAMPLE_DEF, SAMPLE_SPEF); max_size = 3
     b.load()
     n = len({x for m in b.category.morphisms() for x in (m.source, m.target)})
     print(f"design graph: {n} nodes, {len(b.category.morphisms())} edges, "
