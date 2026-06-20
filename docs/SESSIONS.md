@@ -113,6 +113,32 @@ Pushed the timing-prediction question to a verdict, then stopped to reassess hon
 - Reproducer: `domains/silicon/sta_flows/selfmint_sta.tcl` + `early_stage_sta.tcl`
   (+ aes/ibex via the documented ORFS commands). Findings: `docs/SILICON_FINDINGS.md`.
 
+## 2026-06-20 (later) — PIVOT + FIRST REAL WIN: structure predicts real IR-drop ✅
+
+Reframed (user pushed back, rightly): the project isn't a timing predictor — it's a
+verification-backed system to attack chip problems. Timing was one falsifiable test that
+failed. Opened the aperture, set a competitive wedge (reliability co-design: find physical
+stress with cheap structure → fix with grounded materials → prove with receipts), and made
+a 5-phase plan (task list #1–#5). **Phase 1 done, and it's a measured WIN.**
+
+- Ran OpenROAD `analyze_power_grid` (real PDNSim IR-drop) on self-minted aes + ibex →
+  per-instance supply voltage. aes worst drop 90.9 mV (8.3%), ibex 7.2 mV (0.65%).
+- New module `domains/silicon/ir_scoreboard.py`: bins the die into 20×20 tiles, tests
+  whether cheap structural proxies predict the REAL per-tile IR drop. Spearman + prec@k +
+  shuffled control. `tests/test_silicon_ir_scoreboard.py` (4 tests, real-data assertion
+  skips if artifacts absent).
+- **RESULT — PASS on both designs.** fanout +0.597/+0.443, load(cap) +0.586/+0.478,
+  density +0.558/+0.385 (aes/ibex); controls ~0. The FREE signals (fanout, density — no
+  extraction) predict where the chip browns out at +0.4–0.6. (Nuance: strong ranking,
+  prec@10 still weak — ranks risk well, doesn't always nail the single worst tile.)
+- **The insight = the boundary:** structure predicts what optimization does NOT flatten
+  (current / IR-drop / load: WINS) and fails on what it DOES (timing slack: equalized,
+  LOSES). That line is the product: a cheap reliability/power hotspot detector, not a
+  timing tool. Rewrote `docs/SILICON_FINDINGS.md` from obituary → "what structure can and
+  can't predict," with the IR-drop win as the centerpiece.
+- **Next (Phase 2):** fold load + power into one structural hotspot detector; then Phase 3
+  ground the materials engine; Phase 4 close the find→fix→prove co-design loop.
+
 ---
 
 ## 2026-06-20 — #3 measured tier: OpenSTA toolchain BLOCKED (host), ingestion proven
