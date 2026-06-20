@@ -113,6 +113,22 @@
   - **Lesson:** for validating the bridge, a downloaded real DEF/SPEF == a locally
     generated one. Full local OpenLane generation remains optional/deferred (Docker infra),
     NOT on the critical path.
+
+**Then — built the silicon scoreboard (validation)** ✅
+- `domains/silicon/scoreboard.py` — falsifiable test (mirrors `core/scoreboard.py`):
+  does the CHEAP structural signal (curvature/degree/fanout/wirelength, computed WITHOUT
+  SPEF) predict the EXPENSIVE physical cost (SPEF capacitance)? Spearman + prec@k per
+  predictor, plus a SHUFFLE control that must collapse to ~0. numpy+stdlib (own spearman).
+- `tests/test_silicon_scoreboard.py` — 6 tests. **Full suite 182 passing.**
+- **RESULT — PASS on real silicon, with an honest finding:**
+  - real gcd: best predictor **fanout** spearman **+0.563**, prec@10 **0.80**; control +0.08.
+  - real 45_gcd: fanout **+0.582**, prec@10 **0.80**; control +0.09. Consistent.
+  - **Curvature alone is WEAK on real designs (+0.13–0.16)** — it only looked strong on the
+    planted toy. Takeaway: Ricci/Fiedler geometry is for SEAM/partition detection, not
+    per-net congestion ranking; fanout/degree dominate congestion. LEF/real-placement
+    wirelength would likely lift the geometric signals.
+  - The near-zero shuffle control proves the signal is real. **Triage is screening-grade:
+    top-10 structural picks catch 80% of the physically heaviest nets, in seconds.**
 - Deferred: RTL↔layout *coherence* on real data needs a verilog gate-netlist parser.
 - Optional: HTML dashboard for the ledger; promote claims to `measured` once STA/SPICE
   evidence is attached (the tier slots exist).
