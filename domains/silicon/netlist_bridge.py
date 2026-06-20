@@ -17,9 +17,10 @@ Honesty (CLAUDE.md #1, #8): the structural geometry (curvature, seam) is a PROPO
 The SPEF capacitance is `measured_proxy` evidence (extracted by a tool), kept distinct
 from the structural ranking. Nothing here simulates silicon — it reads tool output.
 
-Connectivity model: each net is a star from its first listed pin (driver) to the rest
-(sinks). Power/ground/clock and very-high-fanout nets are skipped by default — they
-connect everything and would drown out signal-routing structure.
+Connectivity model: each signal net is stored as one colored n-ary operation. The
+binary `Category` used by Ricci/Fiedler is an explicit driver-star projection. LEF
+OUTPUT direction makes that projection order-invariant; without LEF it is labeled as
+a DEF-order fallback. Power/ground/clock and very-high-fanout nets are skipped.
 
 Built against a committed sample (`samples/tiny_core.def/.spef`) but written to the
 LEF/DEF 5.8 and IEEE-1481 SPEF grammars, so real OpenLane output parses unchanged.
@@ -145,6 +146,7 @@ class NetlistBridge(Bridge):
     """Load a DEF (+ optional SPEF) into a `Category` of blocks and wires."""
 
     def __init__(self, def_path: str, spef_path: Optional[str] = None,
+                 lef_path: Optional[str] = None,
                  name: str = "netlist", max_fanout: int = 32,
                  skip_globals: bool = True, **kw):
         super().__init__(name=name, **kw)
@@ -154,9 +156,42 @@ class NetlistBridge(Bridge):
         if spef_path and os.path.exists(spef_path):
             with open(spef_path, "r", encoding="utf-8", errors="ignore") as fh:
                 self.caps = parse_spef(fh.read())
+        self.macros = {}                       # cell_name -> Macro (LEF)
+        if lef_path and os.path.exists(lef_path):
+            from .lef import parse_lef
+            with open(lef_path, "r", encoding="utf-8", errors="ignore") as fh:
+                self.macros = parse_lef(fh.read())
         self.max_fanout = max_fanout
         self.skip_globals = skip_globals
         self.signal_nets = [n for n in self.nets if self._is_signal(n)]
+        from .net_operad import build_net_operad
+        self.net_operad = build_net_operad(self)
+
+    # --- LEF helpers (no-ops without a LEF) -------------------------------
+    def _macro_of(self, inst: str):
+        comp = self.components.get(inst)
+        return self.macros.get(comp.cell) if comp else None
+
+    def cell_area(self, inst: str) -> float:
+        m = self._macro_of(inst)
+        return m.area if m else 0.0
+
+    def _lef_driver_index(self, net: Net) -> Optional[int]:
+        if self.macros:
+            for i, (inst, pin) in enumerate(net.conns):
+                m = self._macro_of(inst)
+                if m and m.pins.get(pin) == "OUTPUT":
+                    return i
+        return None
+
+    def _driver_index(self, net: Net) -> int:
+        """Projection driver: LEF OUTPUT pin, else the first DEF connection."""
+        lef_index = self._lef_driver_index(net)
+        return lef_index if lef_index is not None else 0
+
+    def driver_source(self, net: Net) -> str:
+        return ("lef_output" if self._lef_driver_index(net) is not None
+                else "def_order_fallback")
 
     def _is_signal(self, net: Net) -> bool:
         if len(net.conns) < 2:
@@ -178,25 +213,32 @@ class NetlistBridge(Bridge):
         objs = []
         for name in sorted(names):
             comp = self.components.get(name)
-            meta = {"cell": comp.cell, "x": comp.x, "y": comp.y} if comp else {"io": True}
+            meta = ({"cell": comp.cell, "x": comp.x, "y": comp.y,
+                     "area_um2": self.cell_area(name)} if comp else {"io": True})
             objs.append(Object(name=name, type_name="block",
                                provenance="def", metadata=meta))
         return objs
 
     def get_morphisms(self) -> List[Morphism]:
-        """Star model: driver (first pin) -> each sink, per signal net."""
+        """Project each n-ary net operation to driver -> sink graph edges.
+
+        The source operation and projection assumption remain attached as metadata.
+        """
+        from .net_operad import project_operation
+
         mors = []
-        for net in self.signal_nets:
-            driver = self._node(*net.conns[0])
-            cap = self.caps.get(net.name)
-            for inst, pin in net.conns[1:]:
-                sink = self._node(inst, pin)
-                if sink == driver:
-                    continue
+        for operation in self.net_operad.operations.values():
+            net = operation.data["net"]
+            cap = operation.data["cap_pf"]
+            assumption = operation.data["projection_assumption"]
+            for driver, sink in project_operation(operation):
                 mors.append(Morphism(
                     name="wire", source=driver, target=sink, confidence=1.0,
-                    metadata={"net": net.name, "fanout": len(net.conns) - 1,
-                              "cap_pf": cap, "wirelength": self._wirelen(driver, sink)}))
+                    metadata={"net": net, "fanout": operation.arity - 1,
+                              "cap_pf": cap, "wirelength": self._wirelen(driver, sink),
+                              "driver_lef": assumption == "lef_output",
+                              "operad_operation": operation.name,
+                              "projection_assumption": assumption}))
         return mors
 
     def _wirelen(self, a: str, b: str) -> Optional[float]:

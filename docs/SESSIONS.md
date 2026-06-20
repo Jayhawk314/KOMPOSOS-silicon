@@ -5,6 +5,206 @@
 
 ---
 
+## 2026-06-20 — Gates-to-tiles Kan extension RESOLVED ✅ (resumed from handoff)
+
+Picked up the partial handoff below; double-checked the baseline (214 passing) and finished it.
+- **Found + fixed the bug that left tiles untested:** `build_tile_crosswalk` called
+  `Category.add(tile, x_index=..., y_index=...)`, but `Object` only takes those inside
+  `metadata` → `TypeError`. Moved them into `metadata`; the module now runs.
+- **Added `tests/test_silicon_tiles.py` (8 tests):** left-Kan additive **mass conservation**
+  (gate count + fanout conserved across tiles), grid-bound indices, unplaced-gate skipping,
+  invalid-grid guard, deterministic shuffle control, CLI JSON, and a real-gcd telemetry test.
+- **Wired the `tiles` CLI command** (`--nx/--ny`) into `agent_tools.py` + MANIFEST.
+- **Result:** on real gcd, the gates→tiles left-Kan aggregation yields tile telemetry where
+  tile **fanout/wirelength predict tile SPEF cap at rho ~0.99** (control −0.19). Mass is
+  conserved (7 sample gates → 7 across tiles).
+- **Full regression: 222 passed** (214 baseline + 8 tiles). No regressions.
+- Scope boundary held: SPEF is routing telemetry, NOT power/IR-drop — tile score is not
+  described as power validation. IR-drop/material/GenerativeLoop items still not started.
+
+---
+
+## 2026-06-19 — Gates-to-tiles Kan extension HANDOFF (partial)
+
+**Completed before cutoff**
+- Audited `categorical/kan_extensions.py` and found it incompatible with the fused
+  `core.Category` API (`objects.items()`, `hom()` returning morphisms, obsolete
+  `morphism.data`).
+- Repaired `LeftKanExtension` to enumerate fused objects/morphisms, read `metadata`,
+  and accept an explicit colimit reducer.
+- Added `domains/silicon/tiles.py` with a first implementation of:
+  - deterministic DEF placement grid (`nx` by `ny`),
+  - gate→tile embedding functor,
+  - additive left-Kan colimit for gate count, LEF area, fanout, wirelength, and SPEF cap,
+  - per-tile SPEF scoreboard with Spearman, precision@k, and shuffled control.
+
+**Verification state**
+- `py_compile categorical/kan_extensions.py domains/silicon/tiles.py` passes.
+- `git diff --check` passes.
+- **No tile unit tests or full regression were run after these two edits.** The last
+  fully verified baseline before the Kan work is **214 passed**.
+
+**Resume exactly here**
+1. Add `tests/test_silicon_tiles.py`: conservation of gate count/area/cap, deterministic
+   assignment, empty/unplaced behavior, and proof that `LeftKanExtension` contributes.
+2. Run the tile tests; fix compatibility or aggregation errors before CLI wiring.
+3. Add `--tiles-x/--tiles-y` and `tiles` to `agent_tools.py`, returning aggregates and
+   telemetry score as JSON.
+4. Run `python -m pytest tests -q`; only then mark Rung 9 complete in
+   `SILICON_PLAN.md`, `SILICON_STATUS.md`, `MEMORY.md`, and `domains/silicon/__init__.py`.
+5. Do not begin IR-drop/current-density until the Kan conservation laws pass.
+
+**Important scope boundary**
+- SPEF capacitance is the currently available routing telemetry proxy. No power/IR-drop
+  data is present, so the tile score must not be described as power validation.
+- The physical/material and `GenerativeLoop` items have not been started.
+
+## 2026-06-19 — Exact cross-layer H0/H1 cohomology
+
+**Did**
+- Added finite-dimensional `C0 -> C1 -> C2` cochain complexes to
+  `topology/persistent_sheaves.py`, with shape/complex validation, SVD rank/nullspace,
+  quotient-basis H1, and edge-support localization.
+- Added `domains/silicon/coherence.py` for artifact calibration nerves and an agent
+  `cohomology` command.
+- Kept coverage mismatches separate from cohomology. Verilog↔DEF↔SPEF is currently a
+  chain, so it cannot honestly produce H1 without an independent third calibration.
+
+**Laws**
+- Filled triangle: H0=1, H1=0.
+- Unfilled pairwise triangle: H0=1, H1=1, localized to all three calibration edges.
+- Disconnected artifact: H0=2, H1=0 (not mislabeled as obstruction).
+- Current two-step crosswalk: H0=1, H1=0; CLI agrees.
+
+**Verified**
+- Focused cross-layer suite: **12 passed**.
+- Full suite: **214 passed**.
+
+## 2026-06-19 — Gate-netlist identity crosswalk
+
+**Contract chosen**
+- Parse the exercised structural Verilog subset: module ports, scalar/bus net
+  declarations, and named-port standard-cell instances.
+- Identify nets by canonical `(instance, pin)` terminal sets, not by net names, so
+  synthesis renaming does not create false incoherence.
+- Report cell mismatches and unmatched logical/physical nets separately. Do not call
+  these H1 obstructions until the real sheaf linear algebra exists.
+
+**Did**
+- Added `domains/silicon/verilog.py` for structural gate Verilog: ANSI/non-ANSI ports,
+  scalar/bus declarations, named standard-cell connections, constants, and comments.
+- Added endpoint-signature crosswalking. Exact terminal sets match even when synthesis
+  renames a net; missing/extra instances, cell mismatches, and logical/physical-only
+  nets remain explicit.
+- Added the agent `crosswalk` command via `--verilog PATH`.
+- Added parser, renamed-net, mismatch, and CLI laws.
+
+**Verified**
+- Full suite: **209 passed**.
+
+**Next**
+- Build the cross-layer sheaf adapter over these identities. Implement actual H0/H1
+  matrices and obstruction localization before using cohomological language in claims.
+
+## 2026-06-19 — Operadic multi-pin net semantics
+
+**Did**
+- Added `domains/silicon/net_operad.py`: one `ColoredOperad` operation per accepted
+  signal net, with canonical terminals, arity, direction source, and SPEF metadata.
+- Changed `NetlistBridge` so binary morphisms are projections of those operations,
+  not the primary net representation. Each edge records `operad_operation` and
+  `projection_assumption`.
+- LEF OUTPUT direction produces an order-invariant driver-star projection. Without
+  LEF, the n-ary terminals remain canonical while the graph projection is honestly
+  labeled `def_order_fallback`.
+- Added the agent `operad` command with color, arity, operation, and fallback summaries.
+- Added laws proving semantic invariance under shuffled DEF connections and projection
+  invariance when LEF is present. The no-LEF law deliberately proves that only the
+  fallback projection can change.
+
+**Verified**
+- Focused operad/netlist/scoreboard/CLI suite: **38 passed**.
+- Full suite: **205 passed**.
+
+**Next**
+- External track: obtain real STA + gate netlist + Liberty + SDC and run timing scoring.
+- Code track: parse gate-level Verilog and build canonical identities needed for true
+  RTL/netlist/layout sheaf coherence.
+
+## 2026-06-19 — STA-backed triage (code complete; real data pending)
+
+**Audit completed**
+- Chosen milestone: finish LEF/STA CLI integration and timing-criticality scoring
+  before starting the operad/sheaf layers.
+- Found no local OpenSTA/OpenROAD executable or real STA report. Docker is installed,
+  but the available real artifacts are DEF/SPEF plus Nangate45 LEF only.
+- Found two honesty/compatibility gaps in the interrupted code: the parser accepts
+  only the fixture's `<value> slack` form, not common `slack (VIOLATED) <value>`
+  output, and bare fixture paths can currently create `measured` ledger claims.
+
+**Completed slice 1 — provenance + CLI**
+- Added provenance-bearing `TimingReport` loading with SHA-256 and automatic fixture
+  detection. The fixture can be parsed and inspected but cannot create measured claims.
+- STA parsing now accepts both `<value> slack (VIOLATED)` and common
+  `slack (VIOLATED) <value>` layouts plus hierarchical instance names.
+- Added global `--lef`/`--sta`, a `sta` command, and STA-aware `ledger` output. Every
+  timing result includes path, source kind, hash, tool label, and evidence eligibility.
+- Added unit and CLI integration laws, including hashed tool-report promotion and
+  fixture non-promotion. Focused result: **24 passed**.
+
+**Completed slice 2 — timing scoreboard**
+- Added STA negative slack as a second independent scoreboard target, reusing the
+  structural predictors, Spearman, precision@k, and deterministic shuffled control.
+- Timing targets are restricted to analyzed signal nets; global `clk` no longer enters
+  critical-net results.
+- Added a JSON `score` agent command. Fixture timing renders `NON-EVIDENCE` and cannot
+  pass regardless of correlation; only a hashed non-fixture report is eligible.
+- Honest fixture result: structural predictors do not predict its planted critical path
+  (correlations are negative or zero). No success claim is made from the fixture.
+- Focused result after this slice: **33 passed**.
+
+**Completed slice 3 — evidence hardening + regression**
+- Unmarked STA files now default to `unverified`; `--sta-source tool` is explicit.
+  The known fixture marker always wins and cannot be overridden.
+- Measured promotion additionally requires hashed gate-netlist, Liberty, and SDC
+  receipts. Tool attestation without all three remains `incomplete_provenance` and
+  creates no measured ledger claim.
+- Canonicalized scoreboard rows by net name after finding that category iteration
+  order made a seeded shuffle nondeterministic across processes. The real conclusions
+  remain: `45_gcd` fanout rho +0.584, wirelength +0.438, deterministic control -0.025;
+  real `gcd` fanout +0.563, control +0.143. Both still pass.
+- Canonical DEF/SPEF and STA fixtures now render `NON-EVIDENCE` even when a metric
+  clears its numerical threshold.
+- Final verification: **201 passed**; `py_compile` and `git diff --check` clean.
+
+**Remaining external dependency**
+- No real STA report, gate netlist, Liberty, or SDC is present locally and no OpenSTA/
+  OpenROAD executable is installed. The next evidence milestone is to obtain those
+  four design-matched artifacts and record the timing scoreboard result without
+  changing thresholds after seeing it.
+
+## 2026-06-19 — Status recovery after LEF/STA session cutoff
+
+**Observed and documented**
+- Added `docs/SILICON_STATUS.md` as the concise source for current progress,
+  evidence boundaries, unfinished work, and the advanced roadmap.
+- Verified the full current suite: **190 passed**.
+- Reproduced the LEF delta on real `45_gcd`: curvature rho +0.131→+0.286 and
+  wirelength +0.243→+0.438. The gain comes primarily from correct output-pin
+  direction; cell-area predictors are weak.
+- Confirmed STA parsing, critical-net mapping, and ledger insertion on the fixture.
+  Real STA is not yet present, and `agent_tools.py` stopped after importing STA helpers:
+  it has no `--sta`, `--lef`, STA command, or ledger integration yet.
+- Corrected an advanced-plan overstatement: `persistent_sheaves.py` does not yet
+  compute/localize an H1 obstruction. It provides coboundaries, persistence, and an
+  H0 heuristic; true H1 requires matrix rank/nullspace and support localization.
+
+**Next**
+- Finish CLI wiring and obtain a real design-matched STA report.
+- Score structural predictors against timing criticality with a shuffled control.
+- Then replace the star net model with operadic n-ary nets and build real cross-layer
+  RTL/netlist/layout coherence.
+
 ## 2026‑06‑19 — Session 1: research + project foundation
 
 **Did**
@@ -132,4 +332,3 @@
 - Deferred: RTL↔layout *coherence* on real data needs a verilog gate-netlist parser.
 - Optional: HTML dashboard for the ledger; promote claims to `measured` once STA/SPICE
   evidence is attached (the tier slots exist).
-</content>

@@ -37,6 +37,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Set, Tuple, Optional, Any, Callable
 from collections import defaultdict
 import math
+import numpy as np
 
 
 @dataclass
@@ -701,3 +702,115 @@ class TemporalPersistentSheaf:
             "num_entities": len(entity_to_vertex),
             "num_events": len(events),
         }
+
+
+# =============================================================================
+# Exact finite-dimensional cochain complexes
+# =============================================================================
+
+@dataclass
+class CohomologyResult:
+    """H0/H1 dimensions and numerical bases in the declared cochain coordinates."""
+
+    h0_dimension: int
+    h1_dimension: int
+    h0_basis: np.ndarray
+    h1_basis: np.ndarray
+    h1_support: List[List[str]]
+
+
+@dataclass
+class CellularCochainComplex:
+    """Finite C0 -> C1 -> C2 cochain complex over the real numbers."""
+
+    delta0: np.ndarray
+    delta1: np.ndarray
+    vertex_labels: List[str]
+    edge_labels: List[str]
+    face_labels: List[str] = field(default_factory=list)
+
+    def __post_init__(self):
+        self.delta0 = np.asarray(self.delta0, dtype=float)
+        self.delta1 = np.asarray(self.delta1, dtype=float)
+        if self.delta0.shape != (len(self.edge_labels), len(self.vertex_labels)):
+            raise ValueError("delta0 shape must be (edges, vertices)")
+        if self.delta1.shape != (len(self.face_labels), len(self.edge_labels)):
+            raise ValueError("delta1 shape must be (faces, edges)")
+        if self.delta1.size and not np.allclose(
+                self.delta1 @ self.delta0, 0.0, atol=1e-9):
+            raise ValueError("Not a cochain complex: delta1 @ delta0 != 0")
+
+    @staticmethod
+    def _rank(matrix: np.ndarray, tolerance: float) -> int:
+        return int(np.linalg.matrix_rank(matrix, tol=tolerance))
+
+    @staticmethod
+    def _nullspace(matrix: np.ndarray, tolerance: float) -> np.ndarray:
+        _, singular, vh = np.linalg.svd(matrix, full_matrices=True)
+        rank = int(np.sum(singular > tolerance))
+        return vh[rank:].T.copy()
+
+    def cohomology(self, tolerance: float = 1e-9,
+                   support_tolerance: float = 1e-7) -> CohomologyResult:
+        h0_basis = self._nullspace(self.delta0, tolerance)
+        kernel1 = self._nullspace(self.delta1, tolerance)
+        rank0 = self._rank(self.delta0, tolerance)
+        h1_dimension = max(0, kernel1.shape[1] - rank0)
+
+        if h1_dimension:
+            u0, singular0, _ = np.linalg.svd(self.delta0, full_matrices=False)
+            image0 = u0[:, :int(np.sum(singular0 > tolerance))]
+            quotient = kernel1 - image0 @ (image0.T @ kernel1)
+            uq, sq, _ = np.linalg.svd(quotient, full_matrices=False)
+            h1_basis = uq[:, :int(np.sum(sq > tolerance))]
+            h1_basis = h1_basis[:, :h1_dimension]
+        else:
+            h1_basis = np.zeros((len(self.edge_labels), 0), dtype=float)
+
+        supports = []
+        for column in range(h1_basis.shape[1]):
+            vector = h1_basis[:, column]
+            scale = max(float(np.max(np.abs(vector))), 1.0)
+            supports.append([
+                label for label, value in zip(self.edge_labels, vector)
+                if abs(value) > support_tolerance * scale])
+        return CohomologyResult(
+            h0_dimension=h0_basis.shape[1],
+            h1_dimension=h1_basis.shape[1],
+            h0_basis=h0_basis,
+            h1_basis=h1_basis,
+            h1_support=supports,
+        )
+
+
+def simplicial_cochain_complex(vertices: List[str],
+                               edges: List[Tuple[str, str]],
+                               faces: List[Tuple[str, str, str]] = None
+                               ) -> CellularCochainComplex:
+    """Build oriented simplicial coboundaries for a finite 2-complex."""
+    vertices = sorted(dict.fromkeys(vertices))
+    canonical_edges = sorted({tuple(sorted(edge)) for edge in edges})
+    canonical_faces = sorted({tuple(sorted(face)) for face in (faces or [])})
+    vertex_index = {vertex: index for index, vertex in enumerate(vertices)}
+    edge_index = {edge: index for index, edge in enumerate(canonical_edges)}
+
+    delta0 = np.zeros((len(canonical_edges), len(vertices)), dtype=float)
+    for row, (source, target) in enumerate(canonical_edges):
+        delta0[row, vertex_index[source]] = -1.0
+        delta0[row, vertex_index[target]] = 1.0
+
+    delta1 = np.zeros((len(canonical_faces), len(canonical_edges)), dtype=float)
+    for row, (a, b, c) in enumerate(canonical_faces):
+        boundary = [((b, c), 1.0), ((a, c), -1.0), ((a, b), 1.0)]
+        for edge, sign in boundary:
+            if edge not in edge_index:
+                raise ValueError(f"Face {(a, b, c)} is missing edge {edge}")
+            delta1[row, edge_index[edge]] = sign
+
+    return CellularCochainComplex(
+        delta0=delta0,
+        delta1=delta1,
+        vertex_labels=vertices,
+        edge_labels=[f"{source}<->{target}" for source, target in canonical_edges],
+        face_labels=["<->".join(face) for face in canonical_faces],
+    )

@@ -13,12 +13,16 @@ note, so the agent never invents a number — it reports computed results.
     python -m domains.silicon.agent_tools corridors --top 5
     python -m domains.silicon.agent_tools seam
     python -m domains.silicon.agent_tools ledger
+    python -m domains.silicon.agent_tools --sta path/to/report.rpt sta
+    python -m domains.silicon.agent_tools --sta path/to/report.rpt --sta-source tool \
+        --sta-netlist netlist.v --sta-liberty cells.lib --sta-sdc constraints.sdc ledger
     python -m domains.silicon.agent_tools interface GaN AlGaN
     python -m domains.silicon.agent_tools stack GAN_ALGAN_POWER
     python -m domains.silicon.agent_tools whatif --isolate u_b0
 
-Defaults to the committed sample (samples/tiny_core.def/.spef); pass --def/--spef
-for real OpenLane output.
+Defaults to the committed sample (samples/tiny_core.def/.spef); pass
+`--def`/`--spef`/`--lef` for real OpenLane output. STA has no default: a report must
+be supplied explicitly, and the committed fixture is identified as non-evidence.
 """
 
 from __future__ import annotations
@@ -39,6 +43,11 @@ from .material_bridge import (
     PROBLEMATIC_INSB_SI,
 )
 from .waste_ledger import build_waste_ledger
+from .sta import critical_nets, load_sta, violating_endpoints, worst_slack
+from .scoreboard import score_layout, score_timing
+from .net_operad import arity_histogram
+from .verilog import build_crosswalk, load_verilog
+from .coherence import analyze_crosswalk_cohomology
 
 NAMED_STACKS = {
     "GAN_ALGAN_POWER": GAN_ALGAN_POWER, "GAAS_ALGAAS_HEMT": GAAS_ALGAAS_HEMT,
@@ -52,6 +61,12 @@ NAMED_STACKS = {
 MANIFEST = {
     "corridors": "Top routing-congestion corridors (Ollivier-Ricci; structural).",
     "seam": "Chiplet seam: Fiedler partition + cut nets (structural).",
+    "sta": "STA paths, violations, and DEF-mapped critical nets with source hash.",
+    "score": "Structural predictors vs SPEF or STA, with a shuffled control.",
+    "operad": "N-ary net operations and graph-projection assumptions.",
+    "crosswalk": "Gate-Verilog to DEF identity matches and mismatches.",
+    "tiles": "Gates->tiles left Kan aggregation + tile-level SPEF telemetry score.",
+    "cohomology": "Exact H0/H1 of justified cross-artifact calibrations.",
     "ledger": "Evidence-tiered waste ledger + action portfolio.",
     "interface": "Material interface verdict for A B (physics -> COG -> HonestyGate).",
     "stack": "Analyze a named heterostructure stack (weakest interface).",
@@ -65,15 +80,28 @@ def _emit(tool: str, summary: str, provenance: str, **data) -> None:
 
 
 def _bridge(args) -> NetlistBridge:
-    b = NetlistBridge(args.def_path, args.spef_path)
+    b = NetlistBridge(args.def_path, args.spef_path, lef_path=args.lef_path)
     b.load()
     return b
+
+
+def _sta_report(args):
+    context = {
+        "netlist": args.sta_netlist,
+        "liberty": args.sta_liberty,
+        "constraints": args.sta_sdc,
+    }
+    return (load_sta(args.sta_path, source_kind=args.sta_source,
+                     context_paths=context, tool=args.sta_tool)
+            if args.sta_path else None)
 
 
 def cmd_manifest(args) -> None:
     _emit("manifest", "KOMPOSOS-V silicon agent tools.",
           "domains/silicon", tools=MANIFEST,
-          defaults={"def": SAMPLE_DEF, "spef": SAMPLE_SPEF})
+          defaults={"def": SAMPLE_DEF, "spef": SAMPLE_SPEF,
+                    "lef": None, "sta": None, "sta_source": "unverified",
+                    "sta_netlist": None, "sta_liberty": None, "sta_sdc": None})
 
 
 def cmd_corridors(args) -> None:
@@ -100,19 +128,171 @@ def cmd_seam(args) -> None:
           cut_nets=a.cut_nets)
 
 
+def cmd_tiles(args) -> None:
+    from .tiles import build_tile_crosswalk, score_tiles
+    b = _bridge(args)
+    cw = build_tile_crosswalk(b, nx=args.nx, ny=args.ny)
+    sc = score_tiles(cw)
+    name, rho = sc.best
+    _emit("tiles",
+          f"{len(cw.tiles)} occupied tiles ({args.nx}x{args.ny} grid); best tile-cap "
+          f"predictor: {name} spearman={rho:.3f} (shuffle control {sc.control_rho:+.3f})",
+          f"{b.name}: gates->tiles LeftKanExtension; additive aggregation of "
+          f"cell area / fanout / wirelength / SPEF cap per physical tile",
+          grid=[args.nx, args.ny], n_tiles=len(cw.tiles),
+          skipped_unplaced=len(cw.skipped_unplaced),
+          score=sc.to_dict(), tiles=cw.to_dict()["tiles"])
+
+
 def cmd_ledger(args) -> None:
     b = _bridge(args)
     a = analyze_layout(b)
+    report = _sta_report(args)
     stacks = [analyze_stack(PROBLEMATIC_GAN_GAAS), analyze_stack(GAN_ALGAN_POWER)]
-    ledger = build_waste_ledger(a, b, stacks)
+    ledger = build_waste_ledger(a, b, stacks, sta_report=report)
     portfolio = {k: [c.claim_id for c in v]
                  for k, v in ledger.action_portfolio().items()}
     _emit("ledger",
           f"{len(ledger.claims)} claims; "
           f"{len(portfolio['ready_for_scoping'])} ready for scoping",
-          f"{b.name} layout + material verdicts; tiers in waste_ledger.py",
+          f"{b.name} layout + material verdicts"
+          f"{f' + STA sha256={report.sha256}' if report else ''}; "
+          "tiers in waste_ledger.py",
           counts_by_evidence=ledger.counts_by_evidence(),
-          action_portfolio=portfolio, claims=ledger.to_rows())
+          action_portfolio=portfolio, claims=ledger.to_rows(),
+          sta_report=report.provenance() if report else None)
+
+
+def cmd_sta(args) -> None:
+    report = _sta_report(args)
+    if report is None:
+        _emit("sta", "No STA report supplied; pass --sta PATH before the command.",
+              "No timing evidence loaded.", status="missing")
+        return
+
+    b = _bridge(args)
+    violations = violating_endpoints(report.paths)
+    critical = critical_nets(report.paths, b)
+    critical_rows = [
+        {"net": net, "negative_slack_ns": round(severity, 4)}
+        for net, severity in sorted(critical.items(), key=lambda item: item[1], reverse=True)
+    ]
+    if report.source_kind == "fixture":
+        qualifier = "fixture parsed; not evidence"
+    elif report.source_kind == "unverified":
+        qualifier = "source unverified; not evidence"
+    elif not report.is_evidence:
+        qualifier = ("tool source missing context receipts: " +
+                     ", ".join(report.missing_context))
+    else:
+        qualifier = "tool report loaded as EDA evidence"
+    _emit(
+        "sta",
+        f"{len(report.paths)} timing path(s), {len(violations)} violating endpoint(s); "
+        f"{qualifier}.",
+        f"{report.tool}; sha256={report.sha256}",
+        status=("incomplete_provenance" if report.source_kind == "tool"
+                and not report.is_evidence else
+                report.source_kind if not report.is_evidence else "measured"),
+        report=report.provenance(),
+        worst_slack_ns=round(worst_slack(report.paths), 4),
+        violating_endpoints=[{"endpoint": endpoint, "slack_ns": slack}
+                             for endpoint, slack in violations],
+        critical_nets=critical_rows,
+    )
+
+
+def cmd_score(args) -> None:
+    if args.sta_path:
+        report = score_timing(
+            args.def_path, args.sta_path, spef_path=args.spef_path,
+            lef_path=args.lef_path, sta_source_kind=args.sta_source,
+            sta_context_paths={
+                "netlist": args.sta_netlist,
+                "liberty": args.sta_liberty,
+                "constraints": args.sta_sdc,
+            },
+            sta_tool=args.sta_tool)
+    else:
+        report = score_layout(
+            args.def_path, args.spef_path, lef_path=args.lef_path)
+
+    name, rho = report.best
+    status = ("NON-EVIDENCE" if not report.evidence_eligible
+              else "PASS" if report.passed else "FAIL")
+    _emit(
+        "score",
+        f"{status}: best {name} rho={rho:+.3f}; "
+        f"shuffle={report.control_rho:+.3f} against {report.target}.",
+        (f"scoreboard target={report.target}; source_kind={report.source_kind}; "
+         f"DEF={args.def_path}; SPEF={args.spef_path}; LEF={args.lef_path}; "
+         f"STA sha256={report.source_sha256 or '(none)'}"),
+        report=report.to_dict(),
+    )
+
+
+def cmd_operad(args) -> None:
+    bridge = _bridge(args)
+    operations = sorted(
+        bridge.net_operad.operations.values(),
+        key=lambda operation: (-operation.arity, operation.name))
+    fallbacks = sum(
+        operation.data["projection_assumption"] == "def_order_fallback"
+        for operation in operations)
+    rows = [{
+        "operation": operation.name,
+        "net": operation.data["net"],
+        "arity": operation.arity,
+        "driver": operation.data["driver"],
+        "projection_assumption": operation.data["projection_assumption"],
+    } for operation in operations[:args.top]]
+    _emit(
+        "operad",
+        f"{len(operations)} n-ary net operation(s); "
+        f"{fallbacks} graph projection(s) use DEF-order fallback.",
+        "categorical.operads.ColoredOperad; graph edges are explicit projections",
+        colors=sorted(bridge.net_operad.colors),
+        arity_histogram=arity_histogram(bridge.net_operad),
+        fallback_projections=fallbacks,
+        operations=rows,
+    )
+
+
+def cmd_crosswalk(args) -> None:
+    if not args.verilog_path:
+        _emit("crosswalk", "No gate Verilog supplied; pass --verilog PATH.",
+              "No logical netlist loaded.", status="missing")
+        return
+    bridge = _bridge(args)
+    crosswalk = build_crosswalk(load_verilog(args.verilog_path), bridge)
+    data = crosswalk.to_dict()
+    summary = (f"{data['matched_nets']} endpoint-identical net(s), "
+               f"{data['renamed_nets']} renamed; "
+               f"{len(crosswalk.logical_only)} logical-only and "
+               f"{len(crosswalk.physical_only)} physical-only.")
+    _emit("crosswalk", summary,
+          f"gate Verilog={args.verilog_path}; DEF={args.def_path}", **data)
+
+
+def cmd_cohomology(args) -> None:
+    if not args.verilog_path:
+        _emit("cohomology", "No gate Verilog supplied; pass --verilog PATH.",
+              "No cross-artifact complex built.", status="missing")
+        return
+    bridge = _bridge(args)
+    crosswalk = build_crosswalk(load_verilog(args.verilog_path), bridge)
+    result = analyze_crosswalk_cohomology(crosswalk, bridge)
+    status = "H1_OBSTRUCTION" if result.h1_dimension else (
+        "DISCONNECTED" if result.h0_dimension > 1 else "COHERENT")
+    _emit(
+        "cohomology",
+        f"{status}: H0={result.h0_dimension}, H1={result.h1_dimension}; "
+        f"{sum(len(items) for items in result.coverage_findings.values())} "
+        "coverage finding(s).",
+        "explicit delta0/delta1 ranks; no inferred artifact calibration edges",
+        status=status,
+        **result.to_dict(),
+    )
 
 
 def cmd_interface(args) -> None:
@@ -181,6 +361,16 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="domains.silicon.agent_tools")
     p.add_argument("--def", dest="def_path", default=SAMPLE_DEF)
     p.add_argument("--spef", dest="spef_path", default=SAMPLE_SPEF)
+    p.add_argument("--lef", dest="lef_path")
+    p.add_argument("--sta", dest="sta_path")
+    p.add_argument(
+        "--sta-source", choices=("unverified", "tool"), default="unverified",
+        help="attest a non-fixture STA artifact as tool output (default: unverified)")
+    p.add_argument("--sta-tool", default="OpenSTA/OpenROAD report_checks")
+    p.add_argument("--sta-netlist", help="gate netlist used by STA")
+    p.add_argument("--sta-liberty", help="Liberty library used by STA")
+    p.add_argument("--sta-sdc", help="timing constraints used by STA")
+    p.add_argument("--verilog", dest="verilog_path", help="gate-level Verilog netlist")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("manifest").set_defaults(func=cmd_manifest)
@@ -189,6 +379,15 @@ def build_parser() -> argparse.ArgumentParser:
     c.set_defaults(func=cmd_corridors)
 
     sub.add_parser("seam").set_defaults(func=cmd_seam)
+    sub.add_parser("sta").set_defaults(func=cmd_sta)
+    sub.add_parser("score").set_defaults(func=cmd_score)
+    o = sub.add_parser("operad"); o.add_argument("--top", type=int, default=10)
+    o.set_defaults(func=cmd_operad)
+    sub.add_parser("crosswalk").set_defaults(func=cmd_crosswalk)
+    t = sub.add_parser("tiles")
+    t.add_argument("--nx", type=int, default=8); t.add_argument("--ny", type=int, default=8)
+    t.set_defaults(func=cmd_tiles)
+    sub.add_parser("cohomology").set_defaults(func=cmd_cohomology)
     sub.add_parser("ledger").set_defaults(func=cmd_ledger)
 
     i = sub.add_parser("interface")

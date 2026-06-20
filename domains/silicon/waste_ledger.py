@@ -15,7 +15,7 @@ Evidence tiers, lowest-to-highest:
     structural_only       geometry alone (curvature, Fiedler) — a proposal
     validated_hypothesis  rests on cited material physics (the 5 scorers + veto)
     measured_proxy        extracted by a tool (SPEF capacitance)
-    measured              direct device measurement (STA/SPICE) — not on a laptop
+    measured              design-matched EDA result (STA); not fabricated-chip data
 
 Claims are sourced from the netlist layout analysis (Rung 2) and material verdicts
 (Rung 1); nothing here simulates silicon.
@@ -213,13 +213,40 @@ def claims_from_stack(stack_analysis) -> List[WasteClaim]:
     return claims
 
 
+def claims_from_sta(sta_report) -> List[WasteClaim]:
+    """Setup violations from a provenance-bearing, evidence-eligible STA report."""
+    from .sta import violating_endpoints
+    if not sta_report.is_evidence:
+        return []
+
+    claims: List[WasteClaim] = []
+    source = (f"{sta_report.tool}; {sta_report.source_path}; "
+              f"sha256={sta_report.sha256}")
+    for endpoint, slack in violating_endpoints(sta_report.paths):
+        claims.append(WasteClaim(
+            claim_id=f"timing_{endpoint}".lower().replace("/", "_"),
+            problem="timing_violation",
+            title=f"Setup timing violation at {endpoint}",
+            location=endpoint, evidence_level="measured",
+            estimate_kind="sta_negative_slack",
+            quantity=round(-slack, 4), unit="ns negative slack",
+            confidence=sta_report.tool,
+            source=source,
+            recommended_action="Upsize/buffer the critical path or retime; re-run STA.",
+            notes="Design-matched EDA timing evidence; not a fabricated-chip measurement."))
+    return claims
+
+
 def build_waste_ledger(layout_analysis=None, bridge=None,
-                       stack_analyses: Optional[Iterable] = None) -> WasteLedger:
+                       stack_analyses: Optional[Iterable] = None,
+                       sta_report=None) -> WasteLedger:
     claims: List[WasteClaim] = []
     if layout_analysis is not None and bridge is not None:
         claims.extend(claims_from_layout(layout_analysis, bridge))
     for sa in (stack_analyses or []):
         claims.extend(claims_from_stack(sa))
+    if sta_report is not None:
+        claims.extend(claims_from_sta(sta_report))
     return WasteLedger(claims=claims)
 
 

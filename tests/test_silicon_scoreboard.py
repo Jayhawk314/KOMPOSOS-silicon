@@ -8,9 +8,11 @@ import os
 import pytest
 
 from domains.silicon.scoreboard import (
-    spearman, precision_at_k, score_layout, PASS_RHO, CONTROL_MAX,
+    spearman, precision_at_k, score_layout, score_timing, PASS_RHO, CONTROL_MAX,
 )
 from domains.silicon.netlist_bridge import SAMPLE_DEF, SAMPLE_SPEF
+
+_STA_RPT = os.path.join(os.path.dirname(SAMPLE_DEF), "tiny_core.sta.rpt")
 
 
 # --- stats helpers (deterministic) ----------------------------------------
@@ -31,19 +33,51 @@ def test_precision_at_k_overlap():
 
 # --- the falsifiable headline: signal beats the shuffle control ------------
 
-def test_sample_passes_and_control_collapses():
+def test_sample_fixture_metrics_are_deterministic_but_cannot_be_evidence():
     rep = score_layout(SAMPLE_DEF, SAMPLE_SPEF, design="sample")
-    name, rho = rep.best
+    _, rho = rep.best
     assert rep.n_nets >= 5
     assert rho >= PASS_RHO                            # a real predictor exists
-    assert abs(rep.control_rho) < CONTROL_MAX         # shuffle kills it
-    assert rep.passed
+    assert rep.passed is False
+    assert rep.source_kind == "fixture"
+    assert "NON-EVIDENCE" in rep.render()
+    assert score_layout(SAMPLE_DEF, SAMPLE_SPEF).control_rho == rep.control_rho
 
 
 def test_predictors_beat_their_own_shuffle_control():
     """Falsifiability: the best predictor must out-correlate the shuffled target."""
     rep = score_layout(SAMPLE_DEF, SAMPLE_SPEF)
     assert rep.best[1] > abs(rep.control_rho)
+
+
+def test_timing_score_fixture_is_computed_but_cannot_pass():
+    rep = score_timing(SAMPLE_DEF, _STA_RPT, spef_path=SAMPLE_SPEF, design="fixture")
+    assert rep.target == "sta_negative_slack"
+    assert rep.n_positive >= 1
+    assert rep.source_kind == "fixture"
+    assert rep.evidence_eligible is False
+    assert rep.passed is False
+    assert rep.spearman
+    assert "NON-EVIDENCE" in rep.render()
+
+
+def test_timing_score_tool_source_is_hashed(tmp_path):
+    text = open(_STA_RPT, encoding="utf-8").read().replace(
+        "KOMPOSOS-V silicon STA fixture", "OpenSTA generated timing report")
+    report_path = tmp_path / "tool_sta.rpt"
+    report_path.write_text(text, encoding="utf-8")
+    context_paths = {}
+    for name in ("netlist", "liberty", "constraints"):
+        context_path = tmp_path / f"{name}.txt"
+        context_path.write_text(name, encoding="utf-8")
+        context_paths[name] = str(context_path)
+    rep = score_timing(
+        SAMPLE_DEF, str(report_path), spef_path=SAMPLE_SPEF,
+        sta_source_kind="tool", sta_context_paths=context_paths)
+    assert rep.evidence_eligible is True
+    assert rep.source_kind == "tool"
+    assert len(rep.source_sha256) == 64
+    assert rep.to_dict()["target"] == "sta_negative_slack"
 
 
 # --- real designs if downloaded (skips otherwise) --------------------------

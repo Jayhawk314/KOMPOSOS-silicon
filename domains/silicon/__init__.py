@@ -11,14 +11,16 @@ emitting an honest, receipt-backed waste ledger and action portfolio.
 
 Mostly an integration of existing engines:
   - materials + 5 scorers  <- KOMPOSOS-IV-CHEM/semiconductor_bridge
-  - sheaf coherence, Ricci/Fiedler flow geometry, waste ledger, agent CLI
+  - coherence pattern, Ricci/Fiedler flow geometry, waste ledger, agent CLI
                             <- KOMPOSOS-GRID/domains/grid
   - the one new piece: netlist_bridge (layout/netlist -> Category)
 
 Invariant: scores/curvature only PROPOSE; the verdict is COG != REJECT + HonestyGate.
-Proxy results are `structural_only`; only real tool output (STA/SPEF/SPICE/DFT) is
-`measured`. No silicon physics is simulated here.
+Structural results are `structural_only`; SPEF is `measured_proxy`. STA is `measured`
+only with an attested report and hashed netlist/Liberty/SDC context. No silicon physics
+is simulated here.
 
-Master plan: docs/SILICON_PLAN.md   Work log: docs/SESSIONS.md
-Status: Rung 0 (synthetic.py) built — synthetic chip + geometry + coherence.
+Master plan: docs/SILICON_PLAN.md   Status: docs/SILICON_STATUS.md
+Work log: docs/SESSIONS.md
+Status: Rungs 0-4 and 6-8 built; Rung 5 real STA evidence remains pending.
 """

@@ -108,7 +108,8 @@ class LeftKanExtension:
     - Predict values for unknown concepts via Lan
     """
 
-    def __init__(self, F: Functor, K: Functor):
+    def __init__(self, F: Functor, K: Functor,
+                 colimit: Optional[Callable[[List[Any], List[float]], Any]] = None):
         """
         Initialize Left Kan Extension.
 
@@ -118,6 +119,7 @@ class LeftKanExtension:
         """
         self.F = F
         self.K = K
+        self.colimit = colimit
         self._cache: Dict[str, Tuple[Any, float]] = {}
 
     def comma_category(self, e: Object) -> CommaCategory:
@@ -130,7 +132,10 @@ class LeftKanExtension:
         comma = CommaCategory(K=self.K, target=e)
 
         # For each object in source category of K
-        for c_name, c in self.K.source_cat.objects.items():
+        source_objects = self.K.source_cat.objects
+        source_objects = (source_objects() if callable(source_objects)
+                          else source_objects.values())
+        for c in source_objects:
             Kc = self.K(c)  # K(c) - the image in the target category
 
             if Kc is None:
@@ -139,10 +144,10 @@ class LeftKanExtension:
             # Find morphisms from K(c) to e
             # In practice, we look for connections in the target category
             target_cat = self.K.target_cat
-            morphisms_to_e = target_cat.hom(
-                Object(Kc) if isinstance(Kc, str) else Kc,
-                e
-            )
+            source_name = Kc if isinstance(Kc, str) else Kc.name
+            morphisms_to_e = [morphism for morphism in
+                              target_cat.morphisms_from(source_name)
+                              if morphism.target == e.name]
 
             for f in morphisms_to_e:
                 comma.add_object(c, f)
@@ -176,7 +181,8 @@ class LeftKanExtension:
             if Fc is not None:
                 values.append(Fc)
                 # Weight by morphism "strength" if available
-                weight = f.data.get("weight", 1.0)
+                metadata = getattr(f, "metadata", getattr(f, "data", {}))
+                weight = metadata.get("weight", 1.0)
                 weights.append(weight)
 
         if not values:
@@ -185,7 +191,8 @@ class LeftKanExtension:
         # Compute colimit as weighted combination
         # For numeric values: weighted average
         # For other types: collect into structure
-        result = self._compute_colimit(values, weights)
+        result = (self.colimit(values, weights) if self.colimit is not None
+                  else self._compute_colimit(values, weights))
         confidence = self._compute_confidence(len(values), weights)
 
         self._cache[e.name] = (result, confidence)

@@ -4,6 +4,7 @@
 """Rung 3 laws: the ledger tiers claims honestly and the agent CLI emits grounded JSON."""
 
 import json
+import os
 
 import pytest
 
@@ -17,6 +18,8 @@ from domains.silicon.waste_ledger import (
     build_waste_ledger, claims_from_stack, EVIDENCE_ORDER, PORTFOLIO_BUCKET,
 )
 from domains.silicon import agent_tools
+
+_STA_RPT = os.path.join(os.path.dirname(SAMPLE_DEF), "tiny_core.sta.rpt")
 
 
 @pytest.fixture
@@ -96,3 +99,67 @@ def test_cli_ledger_has_portfolio(capsys):
     out = _run(capsys, ["ledger"])
     assert set(out["action_portfolio"]) == {
         "ready_for_scoping", "validate_proxy", "review_required"}
+
+
+def test_cli_sta_marks_fixture_as_non_evidence(capsys):
+    out = _run(capsys, ["--sta", _STA_RPT, "sta"])
+    assert out["status"] == "fixture"
+    assert out["report"]["evidence_eligible"] is False
+    assert out["violating_endpoints"] == [{"endpoint": "u_a2", "slack_ns": -0.15}]
+    assert out["critical_nets"]
+
+
+def test_cli_timing_score_keeps_fixture_non_evidence(capsys):
+    out = _run(capsys, ["--sta", _STA_RPT, "score"])
+    assert out["report"]["target"] == "sta_negative_slack"
+    assert out["report"]["evidence_eligible"] is False
+    assert out["report"]["passed"] is False
+
+
+def test_cli_operad_exposes_nary_semantics_and_projection(capsys):
+    out = _run(capsys, ["operad", "--top", "3"])
+    assert out["arity_histogram"]
+    assert len(out["operations"]) == 3
+    assert out["fallback_projections"] > 0
+    assert all("projection_assumption" in operation for operation in out["operations"])
+
+
+def test_cli_ledger_does_not_promote_fixture(capsys):
+    out = _run(capsys, ["--sta", _STA_RPT, "ledger"])
+    assert out["sta_report"]["kind"] == "fixture"
+    assert out["counts_by_evidence"].get("measured", 0) == 0
+
+
+def test_cli_tool_attestation_without_context_is_not_measured(tmp_path, capsys):
+    text = open(_STA_RPT, encoding="utf-8").read().replace(
+        "KOMPOSOS-V silicon STA fixture", "OpenSTA generated timing report")
+    report_path = tmp_path / "tool_sta.rpt"
+    report_path.write_text(text, encoding="utf-8")
+    out = _run(capsys, [
+        "--sta", str(report_path), "--sta-source", "tool", "ledger"])
+    assert out["sta_report"]["evidence_eligible"] is False
+    assert set(out["sta_report"]["missing_context"]) == {
+        "netlist", "liberty", "constraints"}
+    assert out["counts_by_evidence"].get("measured", 0) == 0
+
+
+def test_cli_ledger_promotes_hashed_tool_report(tmp_path, capsys):
+    text = open(_STA_RPT, encoding="utf-8").read().replace(
+        "KOMPOSOS-V silicon STA fixture", "OpenSTA generated timing report")
+    report_path = tmp_path / "tool_sta.rpt"
+    report_path.write_text(text, encoding="utf-8")
+    context_paths = []
+    for option, name in (("--sta-netlist", "netlist.v"),
+                         ("--sta-liberty", "cells.lib"),
+                         ("--sta-sdc", "constraints.sdc")):
+        path = tmp_path / name
+        path.write_text(name, encoding="utf-8")
+        context_paths.extend([option, str(path)])
+
+    out = _run(capsys, [
+        "--sta", str(report_path), "--sta-source", "tool",
+        *context_paths, "ledger"])
+    assert out["sta_report"]["kind"] == "tool"
+    assert out["counts_by_evidence"]["measured"] == 1
+    timing = next(c for c in out["claims"] if c["problem"] == "timing_violation")
+    assert out["sta_report"]["sha256"] in timing["source"]

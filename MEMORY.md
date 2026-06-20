@@ -20,7 +20,7 @@ up. For *how to work in the repo*, see `CLAUDE.md`; for *what it is*, see `READM
   not just route design. A self‑improving loop that can persist ungrounded claims
   reward‑hacks itself into delusion.
 
-## Current state (2026‑06‑17)
+## Substrate state (2026‑06‑17)
 
 - **Six engines** present over one shared `Category`. This is the integration repo /
   substrate; `domains/` is intentionally empty (no vertical yet). `komposos_kg/` is
@@ -49,10 +49,11 @@ up. For *how to work in the repo*, see `CLAUDE.md`; for *what it is*, see `READM
   REJECT) was a silent no‑op and rejected edges persisted. Added; rollbacks now remove.
 - **Tests**: 140 passing (`python -m pytest tests/ -q`).
 
-## Active project: Silicon co‑design domain (2026‑06‑19)
+## Active project: Silicon co‑design domain (updated 2026‑06‑19)
 
 The chosen real domain is **semiconductor co‑design**. Full plan in
-`docs/SILICON_PLAN.md`; running log in `docs/SESSIONS.md`. Key facts:
+`docs/SILICON_PLAN.md`; current handoff/status in `docs/SILICON_STATUS.md`; running
+log in `docs/SESSIONS.md`. Key facts:
 
 - **It is mostly integration, not invention.** ~70% already exists across repos:
   - `KOMPOSOS-IV-CHEM/semiconductor_bridge/` — real materials + 5 scorers
@@ -65,26 +66,39 @@ The chosen real domain is **semiconductor co‑design**. Full plan in
     (evidence tiers), `agent_tools.py`/`agent_server.py` (local‑agent CLI).
   - `KOMPOSOS-III-LAMBDA-max-3D-fume` — **not relevant** (protein/fragrance); only
     `geometry/ricci.py` + `spectral.py` overlap, already wrapped by GRID.
-- **The one new piece = `netlist_bridge`** (layout/netlist → `Category`). Materials
-  layer done; topology/layout layer is the new work. Mirror GRID `ingest.py`.
+- **The one new piece was `netlist_bridge`** (layout/netlist → `Category`). It is
+  built for DEF/SPEF and validated on real OpenROAD layouts. LEF and STA ingestion
+  are present in the current working tree but not yet complete at the CLI boundary.
 - **Data (free, offline after download):** Materials Project (`mp-api`, CHEM already
   has `download_mp_data.py`); SKY130 open PDK; OpenLane/OpenROAD to mint DEF/SPEF/
   netlists locally; EPFL/ISCAS + ISPD benchmarks. Never needs foundry data. Lives
   outside git (`.gitignore`).
 - **Invariant for silicon:** scores/curvature are proposals; verdict = COG≠REJECT +
   HonestyGate grounding. **No physics simulation on the laptop** — ingest tool output
-  as evidence. Proxy = `structural_only`, real tool output = `measured`.
-- **Roadmap:** Rung 0 (synthetic netlist) → 1 (material bridge + verdicts) →
-  2 (netlist_bridge on real OpenLane output) → 3 (waste ledger + agent CLI).
+  as evidence. Structural scores are `structural_only`, SPEF is `measured_proxy`, and
+  real design-matched STA is EDA-workflow `measured` (not fabricated-silicon lab data).
+- **Roadmap:** Rungs 0-3 and the SPEF scoreboard are built. LEF materially improves
+  graph direction; STA parsing, provenance, CLI/ledger integration, and timing scoring
+  are built. Multi-pin nets now have canonical colored-operad semantics with explicit
+  graph projections. Gate Verilog now crosswalks to DEF by endpoint-set identity.
+  Exact finite H0/H1 and obstruction localization now exist for justified artifact
+  nerves. Real design-matched STA artifacts are still absent. The advanced sequence
+  is in `docs/SILICON_STATUS.md`.
 - **Process rule:** every session, read `docs/SILICON_PLAN.md` and append to
   `docs/SESSIONS.md`.
 
 ## Known gaps / next steps
 
-- **Next concrete step: build Rung 0** — `domains/silicon/synthetic.py` + a
-  sheaf/curvature pass printing a congestion corridor / Fiedler seam on a toy chip.
-- Everything is validated on **synthetic graphs**. Highest‑leverage next move: point
-  the loop at a **real domain** (now chosen: silicon) so the scoreboard runs on data that matters.
+- **Next concrete step:** ingest a real design-matched STA report with its gate netlist,
+  Liberty, and SDC receipts, then record the timing scoreboard result honestly.
+- Current real validation covers DEF/SPEF on two OpenROAD GCD layouts. It does not
+  cover real STA, RTL↔layout coherence, IR drop, electromigration, SPICE, or DFT.
+- Multi-pin net semantics are operadic; graph-derived degree/curvature still depends on
+  a documented driver-star projection. LEF makes the projection order-invariant, while
+  no-LEF runs are marked `def_order_fallback`.
+- `persistent_sheaves.py` now computes finite H0/H1 by coboundary rank/nullspace and
+  localizes H1 basis support. Silicon does not infer calibration cycles from missing
+  data, so coverage gaps remain separate from cohomological obstruction claims.
 - `komposos_kg` has **no honesty gate yet** (it's empty) — wire `HonestyGate` when built.
 - The richer PRONOIA `sincerity()` verdict engine (HIDDEN_STEP/FABRICATION/DISTORTION)
   exists but is only used in OPERADUM demos, not the unified loop.
