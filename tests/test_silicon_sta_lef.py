@@ -167,3 +167,33 @@ def test_ledger_includes_measured_tier_with_sta():
 
 def test_parse_sta_empty_is_graceful():
     assert parse_sta("no timing here") == []
+
+
+def test_parse_real_opensta_multicorner_golden_format():
+    """Real OpenSTA `report_checks` output layout (verified against the project's mcmm3.ok
+    golden): multi-corner paths with the '<num>   slack (MET)' line. Proves the ingestion
+    handles genuine tool output, not just our fixture — so #3 is ready for a real run."""
+    text = """
+Startpoint: r2 (rising edge-triggered flip-flop clocked by m1_clk)
+Endpoint: r3 (rising edge-triggered flip-flop clocked by m1_clk)
+Path Group: m1_clk
+Path Type: max
+
+   Delay     Time   Description
+-----------------------------------------------------------
+    0.00     0.00   clock m1_clk (rise edge)
+    0.04     0.04 ^ r2/CK (DFF_X1)
+   -0.00  1000.00   data required time
+         807.59   slack (MET)
+
+Startpoint: r1 (rising edge-triggered flip-flop clocked by m2_clk)
+Endpoint: r3 (rising edge-triggered flip-flop clocked by m2_clk)
+Path Group: m2_clk
+Path Type: max
+         201.62   slack (MET)
+"""
+    paths = parse_sta(text)
+    assert len(paths) == 2
+    assert paths[0].endpoint == "r3" and paths[0].slack == pytest.approx(807.59)
+    assert paths[1].slack == pytest.approx(201.62)
+    assert all(not p.violated for p in paths)        # MET -> no violations -> no claims

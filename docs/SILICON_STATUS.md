@@ -40,7 +40,7 @@ real STA output and its design context have not been ingested.
 | Waste ledger + agent CLI | Complete working tree | Evidence tiers, provenance, portfolio, exports, LEF/STA/score commands | Real STA artifacts are still absent |
 | SPEF scoreboard | Complete and committed | Real layouts beat a shuffled control | Validates screening against extracted capacitance only |
 | LEF ingestion | Working tree | Nangate45 parsing, real output-pin direction tests, scoreboard delta | Area features are weak; direction correction is the main gain |
-| STA ingestion | Code complete, validation pending | Real grammar variants, source/context hashes, critical-net mapping, ledger + scoreboard tests | Fixture is non-evidence; no real OpenSTA/OpenROAD report yet |
+| STA ingestion | Code complete; parser verified vs real OpenSTA output | Real grammar variants, source/context hashes, critical-net mapping, ledger + scoreboard tests; `parse_sta` verified on the project's `mcmm3.ok` golden (multi-corner) + committed real-format regression test | `measured` tier still empty on a real design: local OpenSTA generation is BLOCKED by a host WSL fault (services up, `wsl` CLI hangs; Docker engine depends on it). Ingestion is ready; needs WSL revived to run a real report |
 | Full test suite | Passing | `244 passed` on 2026-06-20 (214 baseline + 8 tiles + 8 IR-drop/EM + 6 fix-loop + 8 scale) | Real-data tests skip when local gitignored files are absent |
 
 Committed work currently ends at the SPEF scoreboard commit (`4e736ec`). LEF/STA,

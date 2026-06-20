@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-06-20 — #3 measured tier: OpenSTA toolchain BLOCKED (host), ingestion proven
+
+Attempted the OpenSTA toolchain bring-up to light up the `measured` tier on a real design.
+- **Blocked by a host-level WSL fault.** Docker engine still 500s on all API versions
+  (post-reboot); the `wsl` CLI itself HANGS (`wsl -l -v`, `wsl --status` time out) even
+  though the services run (`vmcompute`/`WSLService`/`hns` = Running). A reboot did not clear
+  it. Reviving needs user/admin/BIOS actions that also hang from here (`wsl --update`,
+  enable Virtual Machine Platform, firmware virtualization, or a WSL reinstall). Cannot
+  generate a real STA report locally on this machine right now.
+- **Ingestion path PROVEN ready instead.** Verified `sta.py` `parse_sta` on a GENUINE
+  OpenSTA golden (`mcmm3.ok`, multi-corner `report_checks`): 7 paths parsed, slacks correct,
+  worst 201.62 (all MET). Added a committed regression test of the real OpenSTA output
+  format (`<num>   slack (MET)`, multi-corner) so #3's ingestion is locked against real tool
+  output, not just our fixture. The VIOLATED->measured path is already covered by the fixture
+  tests. So: parser + measured-tier code is ready; only LOCAL GENERATION is blocked.
+- **Handoff:** once WSL is revived, run OpenSTA on gcd (examples/liberty/sdc + our gcd.spef)
+  -> real report -> `sta.py` -> `measured` claims in the ledger + scoreboard vs timing.
+
+---
+
 ## 2026-06-20 — Push to 100k+: large01 / netcard (276k nodes) ✅
 
 Pulled OpenROAD's `large01.defok` (gpl golden, "netcard": 274,700 components / 290,354 nets
