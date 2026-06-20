@@ -68,6 +68,7 @@ MANIFEST = {
     "tiles": "Gates->tiles left Kan aggregation + tile-level SPEF telemetry score.",
     "irdrop": "IR-drop hotspot tiles (current-demand proxy; not a PDN sim).",
     "emrisk": "Electromigration-risk nets + interconnect metal proposal (gated).",
+    "fixloop": "Self-learning: compose+verify fixes; learned remediations become primitives.",
     "cohomology": "Exact H0/H1 of justified cross-artifact calibrations.",
     "ledger": "Evidence-tiered waste ledger + action portfolio.",
     "interface": "Material interface verdict for A B (physics -> COG -> HonestyGate).",
@@ -160,6 +161,23 @@ def cmd_irdrop(args) -> None:
           f"NOT a simulated PDN/IR voltage drop.",
           grid=[args.nx, args.ny],
           hotspots=[t.__dict__ for t in tiles[:args.top]])
+
+
+def cmd_fixloop(args) -> None:
+    from .fix_loop import run_fix_loop, verify_em_fix, FIX_PRIMITIVES
+    history, loop = run_fix_loop()
+    start = {p.name for p in FIX_PRIMITIVES}
+    learned = [p.name for p in loop.primitives if p.name not in start]
+    vf = verify_em_fix(_bridge(args))
+    _emit("fixloop",
+          f"Learned {len(learned)} reusable remediation(s): {', '.join(learned) or '-'}"
+          + (f"; verified {vf.fix}->{vf.metal} on {vf.net} "
+             f"(risk {vf.risk_before}->{vf.risk_after}, gate {vf.status})" if vf else ""),
+          "core.generator GenerativeLoop over silicon fixes; verified composites "
+          "become primitives (CLAUDE.md #5). Fix magnitudes are proxies, not a sim.",
+          learned=learned,
+          recipes={g: c.route for g, c in loop.built.items()},
+          verified_fix=(vf.__dict__ if vf else None))
 
 
 def cmd_emrisk(args) -> None:
@@ -437,6 +455,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     em = sub.add_parser("emrisk"); em.add_argument("--top", type=int, default=5)
     em.set_defaults(func=cmd_emrisk)
+
+    sub.add_parser("fixloop").set_defaults(func=cmd_fixloop)
     sub.add_parser("cohomology").set_defaults(func=cmd_cohomology)
     sub.add_parser("ledger").set_defaults(func=cmd_ledger)
 

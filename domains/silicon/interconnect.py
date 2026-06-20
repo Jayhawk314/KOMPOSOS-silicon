@@ -141,8 +141,11 @@ def recommend_interconnect(net: str, severity: float, baseline: str = "Cu",
 
     from core.honesty_gate import HonestyGate
     gate = HonestyGate(min_grounding=min_grounding)
-    claim = (f"{top} replaces {baseline} on {net} em_activation_eV "
-             f"{round(_norm(INTERCONNECT_METALS[top])[0], 2)}")
+    # Ground the recommendation in the committed property facts (same "src rel tgt conf"
+    # vocabulary as the evidence), not in the net name — invariant #4.
+    em_top, cond_top = (round(v, 2) for v in _norm(INTERCONNECT_METALS[top]))
+    claim = (f"{top} em_activation_eV {top} {em_top} "
+             f"{top} conductivity {top} {cond_top}")
     hv = gate.check_claim(cat, top, baseline, "replaces", claim=claim)
 
     if hv.checked and not hv.honest:

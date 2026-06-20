@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-06-20 — Self-learning fix loop (GenerativeLoop) ✅ — final plan item
+
+The capstone: verified silicon fixes become primitives, via the REAL
+`core.generator.GenerativeLoop` (same engine that grows NAND->XOR).
+- `domains/silicon/fix_loop.py` — fix primitives as typed transforms on a discrete
+  risk level (swap_interconnect/widen_wire for EM; reroute_upper_metal/insert_buffer for
+  congestion). Goals "drive any risk level to clean"; OPERADUM composes + COG gates
+  `mitigate_em` and `relieve_congestion`, which are hot-loaded AND appended as primitives.
+  Loop converges when nothing new can be added.
+- `verify_em_fix` grounds it on REAL data: applies the recommended metal swap to the worst
+  EM-risk net (n_bus), verifies the risk proxy drops 1.0->0.5 (Ea 0.8->1.6 eV), gated AGREE.
+- Fixed a grounding bug (recommendation claim referenced the net name, not committed
+  facts -> HOLLOW); re-grounded in the metal-property vocabulary (invariant #4) -> AGREE.
+- `fixloop` CLI; `tests/test_silicon_fix_loop.py` (6 tests): composition, vocab growth,
+  convergence, real before/after improvement, CLI.
+- **All five handoff plan items are now complete.** Scope boundary held throughout:
+  fix magnitudes and current/EM are proxies, never a simulation.
+
+---
+
 ## 2026-06-20 — IR-drop / current-density + interconnect material bridge ✅
 
 Started the next plan item (allowed now that tile Kan conservation laws pass).

@@ -33,12 +33,13 @@ real STA output and its design context have not been ingested.
 | Gates-to-tiles Kan extension | Complete working tree | Fixed an Object-kwarg bug that blocked execution; mass-conservation + grid + skip + scoring tests; `tiles` CLI; on real gcd, tile fanout/wirelength predict tile SPEF cap (rho ~0.99) | Aggregates extracted cap/area, not yet IR-drop/power telemetry |
 | IR-drop / current-density proxy | Complete working tree | `ir_drop.py`: per-tile switching-demand hotspots + per-net EM current-demand proxy; `irdrop`/`emrisk` CLI; measured_proxy claims; 8 tests | Demand proxy from SPEF, NOT a simulated PDN/IR voltage drop |
 | Interconnect material proposal | Complete working tree | `interconnect.py`: Cu/Al/W/Co/Ru/TaN table; severity-weighted EM-vs-resistance ranking; HonestyGate-gated recommendation; layout EM-risk -> metal swap | Bulk literature properties; screening triage, not foundry qualification |
+| Self-learning fix loop (GenerativeLoop) | Complete working tree | `fix_loop.py`: real `core.generator.GenerativeLoop` over typed fix primitives; OPERADUM composes+COG-gates `mitigate_em`/`relieve_congestion`, which become reusable primitives; `verify_em_fix` grounds a swap on a real net (risk 1.0->0.5, gated AGREE); `fixloop` CLI; 6 tests | Fix magnitudes are proxies, not a sim; converges on a fixed primitive set |
 | Ricci corridors + Fiedler seam | Complete | Synthetic recovery and real-layout execution | Useful for structure/partitioning; curvature alone is a weak real per-net cost ranker |
 | Waste ledger + agent CLI | Complete working tree | Evidence tiers, provenance, portfolio, exports, LEF/STA/score commands | Real STA artifacts are still absent |
 | SPEF scoreboard | Complete and committed | Real layouts beat a shuffled control | Validates screening against extracted capacitance only |
 | LEF ingestion | Working tree | Nangate45 parsing, real output-pin direction tests, scoreboard delta | Area features are weak; direction correction is the main gain |
 | STA ingestion | Code complete, validation pending | Real grammar variants, source/context hashes, critical-net mapping, ledger + scoreboard tests | Fixture is non-evidence; no real OpenSTA/OpenROAD report yet |
-| Full test suite | Passing | `230 passed` on 2026-06-20 (214 baseline + 8 tiles + 8 IR-drop/EM) | Real-data tests skip when local gitignored files are absent |
+| Full test suite | Passing | `236 passed` on 2026-06-20 (214 baseline + 8 tiles + 8 IR-drop/EM + 6 fix-loop) | Real-data tests skip when local gitignored files are absent |
 
 Committed work currently ends at the SPEF scoreboard commit (`4e736ec`). LEF/STA,
 operadic nets, Verilog crosswalking, their tests, and bridge/ledger changes are uncommitted.
