@@ -157,6 +157,28 @@ a 5-phase plan (task list #1–#5). **Phase 1 done, and it's a measured WIN.**
 - **Next (Phase 3):** ground the materials engine (real Cu/W/Ru/Co properties) so the
   "fix" half of co-design carries real receipts; then Phase 4 closes find→fix→prove.
 
+## 2026-06-20 (later) — Phase 3 DONE: materials engine grounded against cited data
+
+User pointed to the sibling repo `KOMPOSOS-IV-CHEM` (the materials bridges). Its
+`metal_bridge/material_properties.py` has real, CITED per-metal data (resistivity +
+melting point + sources: ASM Handbook Vol.2, Smithells) for Cu/Al/W/Mo/Ag/Au.
+
+- New `domains/silicon/materials_grounding.py`: cross-validates `interconnect.py`'s
+  hardcoded metal table against an independently CITED reference (Cu/Al/W/Mo/Ag/Au lifted
+  from CHEM metal_bridge; Co/Ru from Gall J.Appl.Phys. 2016; TaN from CRC/ITRS). Each
+  metal gets a grounding receipt + evidence tier `literature_value`.
+- **It earned its keep — caught real discrepancies:** Cu/Al/Co/TaN grounded (0% error),
+  but W flagged (table 5.60 vs cited 5.28 bulk; thin-film/CVD note) and Ru flagged (7.10
+  vs 7.60; literature spread). Grounding surfaces, doesn't hide.
+- **Grounded the EM-robustness claim in an independent property:** Spearman(melting point,
+  EM activation) = +1.00 — perfectly concordant (Al < Cu < Co < Ru < W on both). The
+  EM ordering is now backed by real Tm data, not asserted.
+- Wired into `recommend_interconnect`: a metal swap now carries cited receipts + tier
+  (e.g. hot net -> Cu→W, "Cu [grounded; ASM/Smithells]", "W [flagged; bulk value]").
+- `tests/test_silicon_materials_grounding.py` (6 tests) + suite green (19 related pass).
+- **Next (Phase 4):** close the loop — hotspot net (Phase 1-2) → grounded material fix
+  (Phase 3) → re-verify it improves the real metric → keep only if proven.
+
 ---
 
 ## 2026-06-20 — #3 measured tier: OpenSTA toolchain BLOCKED (host), ingestion proven

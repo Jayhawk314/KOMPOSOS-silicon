@@ -109,6 +109,12 @@ class MetalRecommendation:
     status: str                # AGREE | HOLLOW (proposal grounded in committed facts?)
     proposals: List[MetalProposal]
     reasons: List[str]
+    citations: List[str] = None        # cited-reference receipts for the metals involved
+    evidence_tier: str = ""
+
+    def __post_init__(self):
+        if self.citations is None:
+            self.citations = []
 
 
 def recommend_interconnect(net: str, severity: float, baseline: str = "Cu",
@@ -122,10 +128,15 @@ def recommend_interconnect(net: str, severity: float, baseline: str = "Cu",
     reasons: List[str] = []
     top = proposals[0].metal if proposals else baseline
 
+    # Grounding receipts: cross-validated cited basis for each metal involved (Phase 3).
+    from .materials_grounding import grounded_citation, EVIDENCE_TIER
+    citations = [grounded_citation(m) for m in dict.fromkeys([baseline, top])]
+
     if top == baseline:
         reasons.append(f"baseline {baseline} already optimal at severity {severity:.2f}")
         return MetalRecommendation(net, round(severity, 3), baseline, baseline,
-                                   "AGREE", proposals, reasons)
+                                   "AGREE", proposals, reasons,
+                                   citations=citations, evidence_tier=EVIDENCE_TIER)
 
     # Commit metal-property facts as evidence in the claim's vocabulary, then ground
     # the recommendation against them (the candidate edge itself is never added).
@@ -157,4 +168,5 @@ def recommend_interconnect(net: str, severity: float, baseline: str = "Cu",
                        + ("" if hv.checked else "; honesty unchecked (degraded open)"))
         status = "AGREE"
     return MetalRecommendation(net, round(severity, 3), baseline, top,
-                               status, proposals, reasons)
+                               status, proposals, reasons,
+                               citations=citations, evidence_tier=EVIDENCE_TIER)
