@@ -5,6 +5,18 @@
 
 ---
 
+## 2026-06-20 — Push to 100k+: large01 / netcard (276k nodes) ✅
+
+Pulled OpenROAD's `large01.defok` (gpl golden, "netcard": 274,700 components / 290,354 nets
+-> **276,249-node / 538,359-edge** graph; placed, 47MB). The scale path holds at the 100k+
+tier: parse 3.9s, load 25s, spatial partition -> 512 bounded regions; per-region effres
+**158.9s sequential -> 73.1s parallel (x2.2)**, identical top-10 corridors. Whole-graph is
+absurd here (276k x 276k dense pinv ~600GB). Added a skip-if-absent parser-scale test
+(parse_def handles >100k components fast; full load ~25s is too slow for the suite).
+Validates the partition+parallel approach across three real designs at 17k / 30k / 276k nodes.
+
+---
+
 ## 2026-06-20 — Push to a bigger design: ibex (~30k nodes) ✅
 
 Pulled OpenROAD's `ibex.defok` (real RISC-V `ibex_core`, 34,184 components / 33,171 nets ->

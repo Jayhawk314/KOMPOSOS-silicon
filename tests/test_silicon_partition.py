@@ -183,6 +183,22 @@ def test_very_large_ibex_partition_scales():
     assert len(parts) > 30
 
 
+@pytest.mark.skipif(
+    not os.path.exists(os.path.join(os.path.dirname(SAMPLE_DEF), "..",
+                                    "data", "openlane", "large01.def")),
+    reason="100k+ large01 design not downloaded")
+def test_parser_scales_to_100k_plus_design():
+    """The DEF parser handles a 100k+ cell design (netcard, ~275k components) fast.
+    Full partition timing lives in the partition benchmark (load alone is ~25s)."""
+    from domains.silicon.netlist_bridge import parse_def
+    p = os.path.join(os.path.dirname(SAMPLE_DEF), "..", "data", "openlane", "large01.def")
+    with open(p, encoding="utf-8", errors="ignore") as fh:
+        comps, nets, dbu = parse_def(fh.read())
+    assert len(comps) > 100000 and len(nets) > 100000      # genuinely 100k+
+    # placement present -> spatial partitioner is applicable at this scale
+    assert any(c.x is not None for c in comps.values())
+
+
 def test_cli_partition_emits_bounded_regions(capsys):
     import json
     from domains.silicon import agent_tools
