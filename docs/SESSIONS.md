@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-06-20 — Scale: fast Ricci + partitioning ✅
+
+Made flow geometry tractable beyond a single small block.
+- Benchmarked on real gcd: exact Ricci 981ms (worst kappa -0.396); LowerRicci 10ms but
+  worst +0.02 (LOSES the bottleneck — unusable for corridors); EffectiveResistance 263ms
+  and worst -0.86 (PRESERVES the bottleneck). Conclusion: effres for scale, not lower.
+- `flow_geometry.edge_curvatures(method=...)`: auto/exact/effres/lower. `auto` = exact
+  below AUTO_EXACT_MAX_EDGES (1500) else effres — gcd/sample stay exact, so all prior
+  tests/results are unchanged; large designs switch automatically.
+- `domains/silicon/partition.py`: recursive Fiedler bisection into bounded regions
+  (connected-components + spectral split), induced sub-categories, `analyze_partitioned`
+  (per-region bounded curvature + inter-region seam nets). On gcd: 423 nodes -> 5 disjoint
+  regions (<=104), cover proven. Bounds per-region cost so exact stays feasible at scale;
+  inter-region edges are seams (use the cheap global `seam`).
+- `partition` CLI; `tests/test_silicon_partition.py` (8): disjoint-cover, bounded size,
+  bus-is-cut, effres preserves bottleneck, auto-threshold, CLI.
+
+---
+
 ## 2026-06-20 — Self-learning fix loop (GenerativeLoop) ✅ — final plan item
 
 The capstone: verified silicon fixes become primitives, via the REAL

@@ -25,12 +25,38 @@ from core.category import Category
 from geometry.ricci import OllivierRicciCurvature
 from geometry.spectral import Graph, GraphLaplacian
 
+# Above this edge count, exact optimal-transport Ricci is too slow; fall back to the
+# Effective-Resistance approximation, which preserves the negative-curvature ranking
+# (the bottleneck) ~4x faster. (LowerRicci is linear but loses the bottleneck, so it is
+# NOT used for corridor detection.) For very large designs, partition first (partition.py).
+AUTO_EXACT_MAX_EDGES = 1500
 
-def edge_curvatures(category: Category) -> List[Tuple[str, str, float]]:
-    """Undirected edge curvatures, most negative (worst bottleneck) first."""
+
+def _curvature(category: Category, method: str):
+    n = len(category.morphisms())
+    if method == "auto":
+        method = "exact" if n < AUTO_EXACT_MAX_EDGES else "effres"
+    if method == "exact":
+        return OllivierRicciCurvature(category, alpha=0.5).compute_all_curvatures()
+    if method == "effres":
+        from geometry.fast_ricci import EffectiveResistanceCurvature
+        return EffectiveResistanceCurvature(category, alpha=0.5).compute_all_curvatures()
+    if method == "lower":
+        from geometry.fast_ricci import LowerRicciCurvature
+        return LowerRicciCurvature(category, alpha=0.5).compute_all_curvatures()
+    raise ValueError(f"unknown curvature method: {method!r}")
+
+
+def edge_curvatures(category: Category,
+                    method: str = "auto") -> List[Tuple[str, str, float]]:
+    """Undirected edge curvatures, most negative (worst bottleneck) first.
+
+    method: "auto" (exact below AUTO_EXACT_MAX_EDGES, else effres), "exact", "effres",
+    or "lower". gcd/sample stay on exact under "auto"; large designs scale automatically.
+    """
     if not category.morphisms():
         return []
-    result = OllivierRicciCurvature(category, alpha=0.5).compute_all_curvatures()
+    result = _curvature(category, method)
     out: List[Tuple[str, str, float]] = []
     seen = set()
     for (s, t), kappa in result.edge_curvatures.items():

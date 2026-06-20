@@ -69,6 +69,7 @@ MANIFEST = {
     "irdrop": "IR-drop hotspot tiles (current-demand proxy; not a PDN sim).",
     "emrisk": "Electromigration-risk nets + interconnect metal proposal (gated).",
     "fixloop": "Self-learning: compose+verify fixes; learned remediations become primitives.",
+    "partition": "Scale: Fiedler-bisect into bounded regions; per-region corridors + seam nets.",
     "cohomology": "Exact H0/H1 of justified cross-artifact calibrations.",
     "ledger": "Evidence-tiered waste ledger + action portfolio.",
     "interface": "Material interface verdict for A B (physics -> COG -> HonestyGate).",
@@ -161,6 +162,23 @@ def cmd_irdrop(args) -> None:
           f"NOT a simulated PDN/IR voltage drop.",
           grid=[args.nx, args.ny],
           hotspots=[t.__dict__ for t in tiles[:args.top]])
+
+
+def cmd_partition(args) -> None:
+    from .partition import analyze_partitioned
+    b = _bridge(args)
+    pa = analyze_partitioned(b, max_size=args.max_size, method=args.method)
+    top = [{"src": s, "tgt": t, "net": net, "curvature": round(k, 3)}
+           for s, t, net, k in pa.corridors[:args.top]]
+    _emit("partition",
+          f"{pa.n_partitions} regions (max {pa.max_partition_size} nodes); "
+          f"worst intra-region corridor: {top[0]['net'] if top else '(none)'}",
+          f"{b.name}: recursive Fiedler bisection (max_size={args.max_size}); "
+          f"bounded-cost {args.method} curvature per region; inter-region wires are "
+          f"seam candidates (use `seam` for the global cut).",
+          n_partitions=pa.n_partitions, max_partition_size=pa.max_partition_size,
+          method=args.method, corridors=top,
+          n_inter_region_nets=len(pa.inter_region_nets))
 
 
 def cmd_fixloop(args) -> None:
@@ -457,6 +475,12 @@ def build_parser() -> argparse.ArgumentParser:
     em.set_defaults(func=cmd_emrisk)
 
     sub.add_parser("fixloop").set_defaults(func=cmd_fixloop)
+
+    pp = sub.add_parser("partition")
+    pp.add_argument("--max-size", dest="max_size", type=int, default=1500)
+    pp.add_argument("--top", type=int, default=5)
+    pp.add_argument("--method", default="auto", choices=["auto", "exact", "effres", "lower"])
+    pp.set_defaults(func=cmd_partition)
     sub.add_parser("cohomology").set_defaults(func=cmd_cohomology)
     sub.add_parser("ledger").set_defaults(func=cmd_ledger)
 
