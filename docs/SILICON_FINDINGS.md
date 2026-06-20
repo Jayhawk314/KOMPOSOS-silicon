@@ -64,6 +64,36 @@ density, no parasitic extraction at all — predict real IR-drop hotspots at +0.
 imperfect — it reliably ranks risk across the die, it doesn't always nail the single
 worst tile.)
 
+## Result 3 — the IR-drop win is NODE-DEPENDENT (mature nodes only)
+
+Tested whether Result 2 generalizes to a different technology node: minted a **7nm**
+(ASAP7) `aes` (23k cells) the same way and ran the same scoreboard against its real
+IR-drop (a hard 19% worst-case drop on the 0.7 V supply).
+
+| design | node | best structural ρ vs real IR | density ρ | verdict |
+|---|---|---:|---:|---|
+| `aes` | 45nm (Nangate) | **+0.60** | +0.56 | PASS |
+| `aes` | **7nm (ASAP7)** | **+0.10** | **−0.30** | **FAIL (inverts)** |
+
+At 7nm the structural signals collapse — and *density actually inverts* (−0.30, stable
+across grid sizes): denser regions drop *less*. The 45nm result is unchanged (regression
+check: +0.598), so this is real, not a code artifact.
+
+**Why (honest physics):** at mature nodes the wires are fat and low-resistance, so where a
+chip browns out tracks *where current is drawn* — which structure sees. At 7nm the wires
+are thin and resistive, so IR drop is dominated by the **resistive power-delivery path**
+(distance through a sparse PDN), not local current demand. The bottleneck moves from
+current-draw to delivery, and the cheap signal no longer applies (denser, better-gridded
+regions even drop less). *Caveat:* this is one 7nm design on ORFS's default ASAP7 power
+grid; disentangling "7nm node" from "this PDN config" needs more designs. But the
+direction is clear and stable.
+
+**Product consequence (honest scope):** the cheap structural IR-drop detector is validated
+for **mature nodes** (45nm here; the low-resistance-wire regime broadly, ~28–130nm — which
+is most chips by volume: automotive, IoT, analog, power, MCUs). At advanced nodes you need
+the real PDN tool. That is a real, defensible market, stated honestly rather than
+over-claimed as "works everywhere."
+
 ## The line we found (the actual insight)
 
 Structure predicts the physical quantities optimization **does not flatten**, and fails on

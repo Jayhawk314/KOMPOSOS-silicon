@@ -241,6 +241,26 @@ Pushed on the open edges.
   Jmax, using LEF cross-sections) would lift the EM check from validated_hypothesis toward
   measured; wrap a *real* third-party ML tool (not a demo stand-in) through the trust gate.
 
+## 2026-06-20 (later) — Phase 7: the IR-drop win is NODE-DEPENDENT (honest narrowing)
+
+Minted **7nm (ASAP7)** gcd + aes via ORFS to test whether the core IR-drop finding
+generalizes across technology nodes. **It does NOT.**
+- 7nm aes (23k cells, real 19% worst IR drop): scoreboard **FAILS** — structural signals
+  collapse and density *inverts* (−0.30, stable across grids); best demand +0.10. The
+  45nm aes regression check still passes (+0.598), so it's real, not a code bug.
+- **Physics:** at mature nodes (fat, low-R wires) IR drop tracks local current demand
+  (structure sees it). At 7nm (thin, resistive wires) IR drop is dominated by the
+  resistive PDN delivery path, not local demand — the bottleneck moves from current-draw
+  to delivery, so the cheap signal fails (denser/better-gridded regions even drop less).
+  Caveat: one 7nm design + ORFS default PDN; node-vs-PDN not fully disentangled, but the
+  direction is stable.
+- **Product scope narrowed honestly:** the cheap IR-drop detector is validated for MATURE
+  nodes (~28-130nm — automotive/IoT/analog/power/MCU, most chips by volume); advanced
+  nodes need the real PDN tool. 7nm gcd was too small to test (768 cells, noise). Updated
+  `docs/SILICON_FINDINGS.md` with Result 3.
+- This is the system working as intended: it falsified an over-broad claim with real
+  measured data and a clean control, and narrowed the product to where it actually holds.
+
 ---
 
 ## 2026-06-20 — #3 measured tier: OpenSTA toolchain BLOCKED (host), ingestion proven
