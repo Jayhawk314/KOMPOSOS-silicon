@@ -85,20 +85,74 @@ def _fiedler_bisect(nodes: List[str], adj: Dict[str, Set[str]]) -> Tuple[List[st
     return a, b
 
 
-def partition_nodes(category: Category, max_size: int = 1500) -> List[List[str]]:
-    """Recursively Fiedler-bisect into node groups each <= max_size."""
+# Spectral bisection does a dense eigensolve, so it is only viable for modest graphs.
+# Above this many nodes, fall back to spatial (placement) bisection, which is O(n log n)
+# and physically meaningful (cells near each other share a region). Coordinates come
+# from the DEF placement carried on each object's metadata.
+SPECTRAL_MAX_NODES = 2000
+
+
+def _coords(category: Category, nodes: List[str]):
+    """Placement coords {node: (x, y)} from object metadata, where available."""
+    out = {}
+    for n in nodes:
+        obj = category.get(n)
+        if obj is not None:
+            x, y = obj.metadata.get("x"), obj.metadata.get("y")
+            if x is not None and y is not None:
+                out[n] = (float(x), float(y))
+    return out
+
+
+def _spatial_bisect(nodes: List[str], coords) -> Tuple[List[str], List[str]]:
+    """Median split along the longer placement axis (k-d-tree style). O(n log n)."""
+    placed = [n for n in nodes if n in coords]
+    unplaced = [n for n in nodes if n not in coords]
+    if len(placed) < 2:
+        mid = len(nodes) // 2
+        return nodes[:mid], nodes[mid:]
+    xs = [coords[n][0] for n in placed]; ys = [coords[n][1] for n in placed]
+    axis = 0 if (max(xs) - min(xs)) >= (max(ys) - min(ys)) else 1
+    placed.sort(key=lambda n: coords[n][axis])
+    mid = len(placed) // 2
+    a, b = placed[:mid], placed[mid:]
+    for i, n in enumerate(unplaced):        # spread unplaced nodes evenly
+        (a if i % 2 == 0 else b).append(n)
+    return a, b
+
+
+def partition_nodes(category: Category, max_size: int = 1500,
+                    method: str = "auto") -> List[List[str]]:
+    """Recursively bisect into node groups each <= max_size.
+
+    method: "spectral" (Fiedler; quality, small graphs), "spatial" (placement median
+    split; scales to millions), or "auto" (spatial above SPECTRAL_MAX_NODES or when the
+    graph is fully placed, else spectral). Spatial is used automatically for big designs.
+    """
     adj = _adjacency(category)
     all_nodes = sorted(adj)
-    work = _components(all_nodes, adj)
+    coords = _coords(category, all_nodes)
+    if method == "auto":
+        method = ("spatial" if len(all_nodes) > SPECTRAL_MAX_NODES and coords
+                  else "spectral")
+    if method == "spatial" and not coords:
+        method = "spectral"          # no placement -> can't split spatially
+
+    work = (_components(all_nodes, adj) if method == "spectral"
+            else [all_nodes])        # spatial ignores connectivity (regions are spatial)
     out: List[List[str]] = []
     while work:
         group = work.pop()
         if len(group) <= max_size:
             out.append(group)
             continue
-        a, b = _fiedler_bisect(group, adj)
-        work.extend(_components(a, adj))
-        work.extend(_components(b, adj))
+        if method == "spectral":
+            a, b = _fiedler_bisect(group, adj)
+            work.extend(_components(a, adj))
+            work.extend(_components(b, adj))
+        else:
+            a, b = _spatial_bisect(group, coords)
+            work.extend([a, b])
     return out
 
 
@@ -116,8 +170,9 @@ def induced_subcategory(category: Category, nodes: List[str], name: str) -> Cate
     return sub
 
 
-def partition_category(category: Category, max_size: int = 1500) -> List[Partition]:
-    groups = partition_nodes(category, max_size)
+def partition_category(category: Category, max_size: int = 1500,
+                       method: str = "auto") -> List[Partition]:
+    groups = partition_nodes(category, max_size, method=method)
     return [Partition(i, sorted(g), induced_subcategory(category, g, f"part_{i}"))
             for i, g in enumerate(groups)]
 
@@ -131,10 +186,14 @@ class PartitionedAnalysis:
 
 
 def analyze_partitioned(bridge, max_size: int = 1500,
-                        method: str = "auto") -> PartitionedAnalysis:
-    """Bounded-cost congestion analysis: curvature per region + inter-region seam nets."""
+                        method: str = "auto",
+                        partition_method: str = "auto") -> PartitionedAnalysis:
+    """Bounded-cost congestion analysis: curvature per region + inter-region seam nets.
+
+    `method` selects the per-region curvature (auto/exact/effres/lower); `partition_method`
+    selects how regions are formed (auto/spatial/spectral)."""
     cat = bridge.category
-    parts = partition_category(cat, max_size)
+    parts = partition_category(cat, max_size, method=partition_method)
     part_of: Dict[str, int] = {n: p.index for p in parts for n in p.nodes}
 
     corridors: List[Tuple[str, str, str, float]] = []

@@ -22,6 +22,17 @@ Made flow geometry tractable beyond a single small block.
 - `partition` CLI; `tests/test_silicon_partition.py` (8): disjoint-cover, bounded size,
   bus-is-cut, effres preserves bottleneck, auto-threshold, CLI.
 
+**Stress test on a larger real design (same day).** Pulled OpenROAD's `aes_nangate45_preroute.def`
+(real AES core: 156k components, 17,386 nets -> 16,853-node / 43,718-edge graph after
+fill/clock filtering; Nangate45 LEF we already had). Found a real limit: my Fiedler
+bisection calls the spectral module's DENSE eigensolve, which won't scale to 16k. Added a
+**spatial (placement) partitioner** (`_spatial_bisect`, median k-d split, O(n log n)); auto
+uses spatial above SPECTRAL_MAX_NODES (2000) or whenever fully placed. Result: AES partitions
+into **32 disjoint balanced regions (~527 each) in ~1s**, full per-region exact analysis in
+~33s — where whole-graph curvature is infeasible (effres needs a 16k x 16k dense pinv).
+Added 2 tests (committed synthetic spatial + skip-if-absent AES scale). gcd/sample stay on
+spectral (< 2000 nodes), so prior tests unchanged.
+
 ---
 
 ## 2026-06-20 — Self-learning fix loop (GenerativeLoop) ✅ — final plan item
