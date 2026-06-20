@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-06-20 — Parallelize per-region analysis ✅
+
+The partition regions are independent, so run their curvature in parallel.
+- Made `analyze_partitioned` default to **effres** per region (it's the scale path) — that
+  alone took AES from 33s (exact) to **8.3s** sequential.
+- Added a `workers` param (int/"auto"/1) using `ProcessPoolExecutor`. Key Windows-spawn
+  fixes: (1) the worker lives in a **numpy-only** `_region_worker.py` (no geometry/TensorFlow
+  import — 0.2s vs 8s startup); (2) made `partition.py`'s own geometry imports LAZY so the
+  entry module re-imported per spawned worker stays cheap. The effres worker is deterministic
+  (node-order indices, no hash-seed set iteration), so **parallel results == sequential**.
+- Result on AES (20 cpus): 8.3s -> **3.1s (x2.6)**, identical top-10 corridors.
+- `partition --workers` CLI flag (default 1; parallel best via the light `python -m
+  domains.silicon.partition` entry — a heavy `__main__` like the full agent CLI pays the
+  re-import per worker on Windows). `tests/test_silicon_partition.py` +2 (worker determinism
+  + effres default); real pool not tested in-suite (would pay 8s heavy import per worker).
+
+---
+
 ## 2026-06-20 — Scale: fast Ricci + partitioning ✅
 
 Made flow geometry tractable beyond a single small block.

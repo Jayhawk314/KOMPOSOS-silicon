@@ -167,7 +167,8 @@ def cmd_irdrop(args) -> None:
 def cmd_partition(args) -> None:
     from .partition import analyze_partitioned
     b = _bridge(args)
-    pa = analyze_partitioned(b, max_size=args.max_size, method=args.method)
+    pa = analyze_partitioned(b, max_size=args.max_size, method=args.method,
+                             workers=args.workers)
     top = [{"src": s, "tgt": t, "net": net, "curvature": round(k, 3)}
            for s, t, net, k in pa.corridors[:args.top]]
     _emit("partition",
@@ -479,7 +480,9 @@ def build_parser() -> argparse.ArgumentParser:
     pp = sub.add_parser("partition")
     pp.add_argument("--max-size", dest="max_size", type=int, default=1500)
     pp.add_argument("--top", type=int, default=5)
-    pp.add_argument("--method", default="auto", choices=["auto", "exact", "effres", "lower"])
+    pp.add_argument("--method", default="effres", choices=["auto", "exact", "effres", "lower"])
+    pp.add_argument("--workers", default=1,
+                    help="per-region parallelism: int or 'auto' (1 = sequential)")
     pp.set_defaults(func=cmd_partition)
     sub.add_parser("cohomology").set_defaults(func=cmd_cohomology)
     sub.add_parser("ledger").set_defaults(func=cmd_ledger)

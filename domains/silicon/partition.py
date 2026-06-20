@@ -24,8 +24,10 @@ from typing import Dict, List, Set, Tuple
 
 from core.category import Category
 from core.types import Object, Morphism
-from geometry.spectral import Graph, GraphLaplacian
-from .flow_geometry import edge_curvatures
+# NOTE: geometry.spectral / flow_geometry pull the heavy geometry+TensorFlow chain (~8s).
+# They are imported LAZILY inside the functions that need them so this module stays cheap
+# to import — critical for ProcessPool workers on Windows (spawn re-imports the entry
+# module per worker; a heavy import here would erase the parallel speedup).
 
 
 @dataclass
@@ -67,6 +69,7 @@ def _components(nodes: List[str], adj: Dict[str, Set[str]]) -> List[List[str]]:
 
 def _fiedler_bisect(nodes: List[str], adj: Dict[str, Set[str]]) -> Tuple[List[str], List[str]]:
     """Split a connected node set by Fiedler-vector sign (balanced fallback if degenerate)."""
+    from geometry.spectral import Graph, GraphLaplacian   # lazy: heavy import
     idx = {n: i for i, n in enumerate(nodes)}
     g = Graph()
     for n in nodes:
@@ -185,26 +188,84 @@ class PartitionedAnalysis:
     inter_region_nets: List[str]                    # cut wires = seam candidates
 
 
+def _resolve_workers(workers, n_parts: int) -> int:
+    if workers in (None, 1):
+        return 1
+    import os
+    cap = os.cpu_count() or 1
+    n = cap if workers in ("auto", -1) else int(workers)
+    return max(1, min(n, cap, n_parts))
+
+
 def analyze_partitioned(bridge, max_size: int = 1500,
-                        method: str = "auto",
-                        partition_method: str = "auto") -> PartitionedAnalysis:
+                        method: str = "effres",
+                        partition_method: str = "auto",
+                        workers=1) -> PartitionedAnalysis:
     """Bounded-cost congestion analysis: curvature per region + inter-region seam nets.
 
-    `method` selects the per-region curvature (auto/exact/effres/lower); `partition_method`
-    selects how regions are formed (auto/spatial/spectral)."""
+    `method` is the per-region curvature: "effres" (default; fast, dependency-light,
+    preserves the bottleneck — the scale path) or "exact" (heavier, opt-in). `partition_method`
+    is how regions are formed (auto/spatial/spectral). `workers` runs the independent regions
+    in parallel (int, "auto", or 1 = sequential); results are identical to sequential because
+    the partition is disjoint and the effres worker is deterministic across processes."""
+    from ._region_worker import region_curvature_task
+
     cat = bridge.category
     parts = partition_category(cat, max_size, method=partition_method)
     part_of: Dict[str, int] = {n: p.index for p in parts for n in p.nodes}
 
-    corridors: List[Tuple[str, str, str, float]] = []
-    for p in parts:
-        net_of = {frozenset((m.source, m.target)): m.metadata.get("net", "?")
-                  for m in p.category.morphisms()}
-        for s, t, k in edge_curvatures(p.category, method=method):
-            corridors.append((s, t, net_of.get(frozenset((s, t)), "?"), k))
+    payloads = [(p.nodes,
+                 [(m.source, m.target, m.metadata.get("net", "?"))
+                  for m in p.category.morphisms()],
+                 method)
+                for p in parts]
+
+    n_workers = _resolve_workers(workers, len(parts))
+    if n_workers > 1:
+        from concurrent.futures import ProcessPoolExecutor
+        with ProcessPoolExecutor(max_workers=n_workers) as ex:
+            results = list(ex.map(region_curvature_task, payloads))
+    else:
+        results = [region_curvature_task(p) for p in payloads]
+
+    corridors = [c for region in results for c in region]
     corridors.sort(key=lambda c: c[3])
 
     inter = sorted({m.metadata.get("net", "?") for m in cat.morphisms()
                     if part_of.get(m.source) != part_of.get(m.target)})
     return PartitionedAnalysis(len(parts), max((p.size for p in parts), default=0),
                                corridors, inter)
+
+
+def main() -> None:
+    """Benchmark sequential vs parallel per-region analysis (guarded for spawn)."""
+    import os
+    import time
+    from .netlist_bridge import NetlistBridge, SAMPLE_DEF, SAMPLE_SPEF
+
+    data = os.path.join(os.path.dirname(SAMPLE_DEF), "..", "data", "openlane")
+    aes = os.path.join(data, "aes.def")
+    if os.path.exists(aes):
+        lef = os.path.join(data, "Nangate45.lef")
+        b = NetlistBridge(aes, lef_path=lef if os.path.exists(lef) else None)
+        max_size = 800
+    else:
+        b = NetlistBridge(SAMPLE_DEF, SAMPLE_SPEF); max_size = 3
+    b.load()
+    n = len({x for m in b.category.morphisms() for x in (m.source, m.target)})
+    print(f"design graph: {n} nodes, {len(b.category.morphisms())} edges, "
+          f"max_size={max_size}, cpus={os.cpu_count()}")
+
+    t = time.time(); seq = analyze_partitioned(b, max_size=max_size, workers=1)
+    t_seq = time.time() - t
+    t = time.time(); par = analyze_partitioned(b, max_size=max_size, workers="auto")
+    t_par = time.time() - t
+
+    print(f"  sequential: {t_seq:6.1f}s  ({seq.n_partitions} regions)")
+    print(f"  parallel:   {t_par:6.1f}s  speedup x{t_seq / t_par:.1f}")
+    same = seq.corridors[:10] == par.corridors[:10]
+    print(f"  identical top-10 corridors: {same}  worst={par.corridors[0][2] if par.corridors else None}")
+
+
+if __name__ == "__main__":
+    main()

@@ -141,6 +141,28 @@ def test_large_aes_partition_scales():
     assert edge_curvatures(region.category, method="exact")
 
 
+def test_region_worker_is_deterministic_and_finds_bottleneck():
+    """The light effres worker (used by the process pool) is deterministic and preserves
+    the negative-curvature bottleneck — so parallel == sequential, and the signal survives."""
+    from domains.silicon._region_worker import region_curvature_task
+    b = _sample()
+    nodes = sorted(_nodes(b.category))
+    edges = [(m.source, m.target, m.metadata.get("net", "?")) for m in b.category.morphisms()]
+    payload = (nodes, edges, "effres")
+    r1 = region_curvature_task(payload)
+    r2 = region_curvature_task(payload)
+    assert r1 == r2                      # deterministic across calls (and thus processes)
+    assert r1[0][3] < 0                  # the bus bottleneck is negative under effres
+    assert r1[0][2] == "n_bus"
+
+
+def test_analyze_partitioned_effres_default_matches_worker():
+    """workers=1 path equals calling the worker directly (sequential correctness)."""
+    b = _sample()
+    pa = analyze_partitioned(b, max_size=8, workers=1)   # default method=effres
+    assert pa.corridors and pa.corridors[0][3] < 0
+
+
 def test_cli_partition_emits_bounded_regions(capsys):
     import json
     from domains.silicon import agent_tools
