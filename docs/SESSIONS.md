@@ -21,12 +21,15 @@ boundary + measured-analogue thermal ground truth, NO multi-hour run needed.
 - This is the system/multi-die effect the within-die partition proxy was blind to — it
   EXPLAINS the weak proxy: in a 3D stack the dominant thermal driver is the opposing die, and
   cheap structure (cross-die power) captures it. **Track 2 now has a real measured receipt.**
-- Honest caveats: pooled tiles mix both dies (one has the heat sink) so some own-vs-stacked
-  asymmetry may be die-position geometry (within-die-split refinement would isolate it);
-  power→temp is partly trivial, the informative part is the sign flip.
-  `tests/test_silicon_thermal3d.py` (3: parsers, planted-coupling recovery, real bp_fe).
-- Next: per-die-split refinement; pull Open3DBench per-die DEFs to run placement geometry +
-  extend the τ measured net-delay test to 3D.
+- **Per-die-split refinement (done):** removing the heat-sink confound, coupling SURVIVES for
+  the UPPER (sink-far) die — 7/8, mean +0.45 (swerv +1.08, bp_fe +0.76) — but is ~0 for the
+  BOTTOM (sink-near) die (5/8, +0.02). Physically sensible: the sink-far die dumps heat
+  THROUGH the other die, so the sink-near die's power governs the sink-far die's temp, not the
+  reverse. So the effect is real and DIRECTIONAL (onto the sink-far die); pooled 8/8 was partly
+  die-position inflation. Honest residual: power→temp partly trivial; informative parts are the
+  sign flip + the direction. `tests/test_silicon_thermal3d.py` (3) now checks the per-die split.
+- Next: pull Open3DBench per-die DEFs (MoL flow) to run placement geometry + extend τ
+  measured net-delay to 3D.
 
 ## 2026-06-20 (later) — Track 2 proxy experiment: weak/mixed (needs real package data) — honest
 

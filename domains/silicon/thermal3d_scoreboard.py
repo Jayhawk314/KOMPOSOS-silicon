@@ -118,7 +118,14 @@ class Thermal3DReport:
 
 
 def thermal3d_scoreboard(ptrace_path: str, steady_path: str,
-                         design: str = "design", seed: int = 0) -> Thermal3DReport:
+                         design: str = "design", seed: int = 0,
+                         die_filter: str | None = None) -> Thermal3DReport:
+    """Score structure vs per-tile temperature.
+
+    die_filter: None pools both dies; "upper"/"bottom" restricts to one die. The per-die
+    runs isolate the cross-die coupling from any die-position confound (one die carries the
+    heat sink), since within a single die every tile shares the same stack geometry.
+    """
     power = {k: v for k, v in parse_ptrace(ptrace_path).items() if _TILE.match(k)}
     temp = parse_steady_tiles(steady_path)
 
@@ -133,6 +140,8 @@ def thermal3d_scoreboard(ptrace_path: str, steady_path: str,
     targets: List[float] = []
     for name, own in power.items():
         die, r, c = tile(name)
+        if die_filter is not None and die != die_filter:
+            continue
         if (die, r, c) not in temp:
             continue
         stacked = power.get(f"{other(die)}_{r}_{c}", 0.0)
@@ -172,19 +181,31 @@ def main() -> None:
               " domains/silicon/data/open3dbench")
         return
     designs = sorted(d for d in os.listdir(_EX) if d.startswith("3D_"))
-    gains = []
+    print(f"{'design':<16}{'pooled gain':>12}{'upper-only':>12}{'bottom-only':>12}"
+          f"{'stacked(pool)':>14}")
+    gains = {"pooled": [], "upper": [], "bottom": []}
     for d in designs:
         pt = f"{_EX}/{d}/test.ptrace"
         st = f"{_EX}/{d}/outputs/test.steady"
         if not (os.path.exists(pt) and os.path.exists(st)):
             continue
-        rep = thermal3d_scoreboard(pt, st, design=d.replace("3D_", ""))
-        print(rep.render()); print()
-        gains.append(rep.coupling_gain)
-    if gains:
-        pos = sum(1 for g in gains if g > 0.01)
-        print(f"3D-coupling gain positive on {pos}/{len(gains)} designs "
-              f"(mean {sum(gains)/len(gains):+.3f}).")
+        name = d.replace("3D_", "")
+        pool = thermal3d_scoreboard(pt, st, design=name)
+        up = thermal3d_scoreboard(pt, st, design=name, die_filter="upper")
+        bot = thermal3d_scoreboard(pt, st, design=name, die_filter="bottom")
+        gains["pooled"].append(pool.coupling_gain)
+        gains["upper"].append(up.coupling_gain)
+        gains["bottom"].append(bot.coupling_gain)
+        print(f"{name:<16}{pool.coupling_gain:>+12.3f}{up.coupling_gain:>+12.3f}"
+              f"{bot.coupling_gain:>+12.3f}{pool.spearman.get('stacked',0.0):>+14.3f}")
+    print()
+    for scope, gs in gains.items():
+        if gs:
+            pos = sum(1 for g in gs if g > 0.01)
+            print(f"  {scope:<8} cross-die coupling gain positive on {pos}/{len(gs)} "
+                  f"(mean {sum(gs)/len(gs):+.3f})")
+    print("\nIf the coupling gain survives the per-die split (upper-only / bottom-only),")
+    print("it is real cross-die thermal coupling, not a die-position/heat-sink artifact.")
 
 
 if __name__ == "__main__":

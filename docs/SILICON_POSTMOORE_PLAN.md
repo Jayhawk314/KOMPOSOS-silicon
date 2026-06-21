@@ -111,13 +111,20 @@ OTHER die?*
   blind to — it explains the weak proxy result. In a 3D stack the dominant thermal driver is
   the *opposing die*, and cheap structure (a tile's cross-die power) captures it. Track 2 now
   has a real, measured, multi-die receipt.
-- **Honest caveats:** the pooled analysis mixes the two dies (one carries the heat sink), so
-  part of the own-vs-stacked asymmetry may be die-position geometry, not pure coupling — a
-  within-die-split refinement would isolate it; and power→temperature is partly trivial (the
-  informative part is the *sign flip*: own negative, stacked positive). `tests/
-  test_silicon_thermal3d.py` plants a known coupling and checks recovery + control.
-- **Next:** the per-die-split refinement; and pull Open3DBench per-die DEFs (their flow) to
-  run the placement geometry + extend the τ measured net-delay test to 3D.
+- **Per-die-split refinement (done) — the finding is real AND directional.** Splitting by die
+  to remove the heat-sink confound: the coupling **survives strongly for the UPPER (sink-far)
+  die — 7/8 designs, mean gain +0.45** (swerv +1.08, bp_fe +0.76, bp_be +0.56) — but is **~0
+  for the BOTTOM (sink-adjacent) die (5/8, mean +0.02)**. Physically sensible: the die far
+  from the heat sink must dump its heat *through* the other die, so the sink-near die's power
+  governs the sink-far die's temperature, not the reverse. So the pooled 8/8 was partly
+  inflated by die position; the true effect is **directional cross-die coupling onto the
+  sink-far die**, which a within-die view cannot capture and cheap structure predicts.
+- **Honest residual:** power→temperature is partly trivial; the informative parts are the
+  *sign flip* (own-die power negative) and the *direction* (sink-far die only). `tests/
+  test_silicon_thermal3d.py` checks planted-coupling recovery, the per-die split, and real
+  bp_fe (upper-die coupling > 0.1).
+- **Next:** pull Open3DBench per-die DEFs (their MoL flow) to run the placement geometry +
+  extend the τ measured net-delay test to 3D.
 
 ## Track 3 — EPE / DSA pattern-fidelity coherence (TSMC + Intel). **Gated research probe.**
 

@@ -64,6 +64,9 @@ def test_cross_die_coupling_recovered(tmp_path):
     # shuffle control on the best predictor collapses -> the signal is real
     name = rep.best[0]
     assert abs(rep.control[name]) < 0.20
+    # die_filter isolates one die; the planted coupling is symmetric so it survives
+    up = thermal3d_scoreboard(pt, st, design="synth", die_filter="upper")
+    assert up.n_tiles == 36 and up.coupling_gain > 0.0
 
 
 _EX = "domains/silicon/data/open3dbench/OpenROAD-3D/flow/HotSpot/examples/3D_bp_fe"
@@ -79,3 +82,8 @@ def test_real_open3dbench_bp_fe():
     # the real, robust finding: cross-die coupling beats the own-power baseline
     assert rep.coupling_gain > 0.0
     assert rep.spearman["stacked"] > rep.spearman["own"]
+    # REFINED: the coupling survives within the sink-far (upper) die -- not a pooling
+    # artifact of the two dies having different stack geometry.
+    up = thermal3d_scoreboard(f"{_EX}/test.ptrace", f"{_EX}/outputs/test.steady",
+                              design="bp_fe", die_filter="upper")
+    assert up.n_tiles == 100 and up.coupling_gain > 0.1
