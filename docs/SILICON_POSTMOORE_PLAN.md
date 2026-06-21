@@ -81,7 +81,18 @@ boundaries.
 **Plan:** point the existing geometry at a real package/chiplet-level netlist (multi-die,
 interposer, or NoC). The code path already exists; this is a **data-acquisition** task
 (public chiplet/NoC layouts) plus a validation target (package-level IR/thermal/latency).
-No new unvalidated code until real package data is in hand.
+
+**Proxy experiment run (2026-06-20) — honest, weak result.** `system_scoreboard.py`
+partitions a real die into chiplet-analogue blocks, marks boundary-crossing nets as the
+system interconnect, and tests vs REAL measured IR-drop. On aes + ibex the signal is **weak
+and design-dependent**: inter-block nets sit in only ~5–12% higher IR regions (aes 1.06×
+FAIL, ibex 1.12× PASS); block `system_load` predicts block IR cleanly on ibex (+0.47,
+control −0.00) but is null on aes. Shuffle controls collapse to ~1.0, so the mechanism is
+sound — the *signal* is just weak. **Verdict:** a within-die proxy does NOT substitute for
+real package data; the system-interconnect-stress thesis needs an actual multi-die/chiplet
+layout to test. The partition→classify→validate path is built and ready to point at one.
+`tests/test_silicon_system_scoreboard.py` locks the honesty mechanism (control collapses),
+not a design-dependent pass.
 
 ## Track 3 — EPE / DSA pattern-fidelity coherence (TSMC + Intel). **Gated research probe.**
 

@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-06-20 (later) — Track 2 proxy experiment: weak/mixed (needs real package data) — honest
+
+Built `system_scoreboard.py` (Track 2): partition a real die into chiplet-analogue blocks
+(spatial Fiedler bisection), mark boundary-crossing nets as the **system interconnect**, and
+test vs REAL measured IR-drop — H1 (are system nets in higher-IR regions?) + H2 (does a
+block's system-connectivity predict its IR stress?), both with shuffle controls.
+- **Real result (aes + ibex) — weak, design-dependent.** H1 separation: aes 1.057x (FAIL),
+  ibex 1.124x (PASS); shuffle controls clean (~0.997x). H2: ibex `system_load` +0.473
+  (control −0.001) and `system_links` +0.553 (control +0.223); aes `system_load` ≈ 0.
+- **Honest verdict:** the within-die "chiplet analogue" does NOT strongly validate the
+  package-interconnect-stress thesis — the effect is small (5–12%) and doesn't generalize
+  across designs. The mechanism is sound (controls collapse); the *signal* is weak. This
+  CONFIRMS Track 2 genuinely needs real multi-die/chiplet data, not a within-die proxy. The
+  partition→classify→validate code path is built and ready to point at real package data.
+- `tests/test_silicon_system_scoreboard.py` locks the honesty mechanism (control ~1.0), not
+  a design-dependent pass. This is proposal-vs-verification again: proposed a proxy, measured
+  it honestly, it under-delivered, reported that rather than overselling.
+- **Tracks status:** 1 = DONE (measured). 2 = proxy run, weak; real package data is the gate.
+  3 = still a gated research probe (EPE/DSA placement-error data).
+
 ## 2026-06-20 (later) — Track 1 CLOSED at measured tier + Docker confirmed working ✅
 
 Picked up Track 2; user rightly questioned the "can't run Docker" assumption. **Checked:
