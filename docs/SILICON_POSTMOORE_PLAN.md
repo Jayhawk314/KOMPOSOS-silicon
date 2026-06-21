@@ -94,6 +94,31 @@ layout to test. The partition→classify→validate path is built and ready to p
 `tests/test_silicon_system_scoreboard.py` locks the honesty mechanism (control collapses),
 not a design-dependent pass.
 
+**Real multi-die data acquired + a measured WIN (2026-06-20).** Scouted public datasets
+(see below) and pulled **Open3DBench** (`github.com/lamda-bbo/Open3DBench`): 8 real
+face-to-face 3D-IC designs (ariane133/136, black_parrot, bp_*, swerv_wrapper), each two
+stacked dies tiled 10x10, with committed HotSpot per-tile **power** and steady-state
+**temperature** — a genuine multi-die boundary with measured-analogue thermal ground truth,
+no multi-hour run. `thermal3d_scoreboard.py` asks the genuinely-3D question a within-die view
+cannot: *does a tile's temperature depend on the power of the tile STACKED across it on the
+OTHER die?*
+- **RESULT — yes, strongly, on 8/8 designs.** Cross-die (stacked) power predicts tile
+  temperature far better than the tile's OWN power; own-die power is often *negatively*
+  correlated. Adding the cross-die term beats the 2D baseline on **8/8 designs, mean coupling
+  gain +0.54** (e.g. bp_fe own −0.558 → stacked +0.564; bp_multi own −0.194 → stacked +0.631),
+  shuffle controls collapse (~0).
+- **Why this matters:** this is exactly the system/multi-die effect the within-die proxy was
+  blind to — it explains the weak proxy result. In a 3D stack the dominant thermal driver is
+  the *opposing die*, and cheap structure (a tile's cross-die power) captures it. Track 2 now
+  has a real, measured, multi-die receipt.
+- **Honest caveats:** the pooled analysis mixes the two dies (one carries the heat sink), so
+  part of the own-vs-stacked asymmetry may be die-position geometry, not pure coupling — a
+  within-die-split refinement would isolate it; and power→temperature is partly trivial (the
+  informative part is the *sign flip*: own negative, stacked positive). `tests/
+  test_silicon_thermal3d.py` plants a known coupling and checks recovery + control.
+- **Next:** the per-die-split refinement; and pull Open3DBench per-die DEFs (their flow) to
+  run the placement geometry + extend the τ measured net-delay test to 3D.
+
 ## Track 3 — EPE / DSA pattern-fidelity coherence (TSMC + Intel). **Gated research probe.**
 
 **Unification:** TSMC's **Edge Placement Error** and DSA's **placement error** are the same

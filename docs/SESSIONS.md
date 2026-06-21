@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-06-20 (later) — Track 2 REAL multi-die win: 3D thermal cross-die coupling (Open3DBench) ✅
+
+Scouted public chiplet/3D datasets, pulled **Open3DBench** (`lamda-bbo/Open3DBench`, under
+`data/open3dbench`, gitignored). It ships 8 real face-to-face 3D-IC designs (ariane133/136,
+black_parrot, bp_*, swerv_wrapper), each two stacked dies tiled 10x10, with **committed
+HotSpot per-tile power (.ptrace) + steady-state temperature (.steady)** — real multi-die
+boundary + measured-analogue thermal ground truth, NO multi-hour run needed.
+- `domains/silicon/thermal3d_scoreboard.py` asks the genuinely-3D question: does a tile's
+  temperature depend on the power of the tile STACKED across it on the OTHER die?
+- **RESULT — yes, 8/8 designs.** Cross-die (stacked) power predicts tile temperature far
+  better than own power; own-die power is often NEGATIVE (bp_fe own −0.558 vs stacked +0.564;
+  bp_multi −0.194 vs +0.631; ariane133 own −0.312 vs stacked-added +0.49). Coupling gain
+  positive on **8/8, mean +0.54**; shuffle controls collapse (~0).
+- This is the system/multi-die effect the within-die partition proxy was blind to — it
+  EXPLAINS the weak proxy: in a 3D stack the dominant thermal driver is the opposing die, and
+  cheap structure (cross-die power) captures it. **Track 2 now has a real measured receipt.**
+- Honest caveats: pooled tiles mix both dies (one has the heat sink) so some own-vs-stacked
+  asymmetry may be die-position geometry (within-die-split refinement would isolate it);
+  power→temp is partly trivial, the informative part is the sign flip.
+  `tests/test_silicon_thermal3d.py` (3: parsers, planted-coupling recovery, real bp_fe).
+- Next: per-die-split refinement; pull Open3DBench per-die DEFs to run placement geometry +
+  extend the τ measured net-delay test to 3D.
+
 ## 2026-06-20 (later) — Track 2 proxy experiment: weak/mixed (needs real package data) — honest
 
 Built `system_scoreboard.py` (Track 2): partition a real die into chiplet-analogue blocks
