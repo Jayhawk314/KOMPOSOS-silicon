@@ -1,102 +1,104 @@
 # KOMPOSOS-Silicon — Handoff (start here)
 
-> Plain-English snapshot to resume this work (or hand it to someone else).
-> Repo: https://github.com/Jayhawk314/KOMPOSOS-silicon · branch `main` · latest at handoff: `696d394`.
-> Deeper docs: `SILICON_FINDINGS.md` (what's true/false, with receipts), `SILICON_PLAN.md`
-> (the plan), `SESSIONS.md` (full chronological log), `domains/silicon/sta_flows/` (reproducers + hashes).
+> Plain-English snapshot to resume this work in a fresh session.
+> Repo branch `main` · latest at handoff: `06e27e7` (2026-06-21).
+> Deeper docs, in reading order:
+> - `docs/SILICON_POSTMOORE_PLAN.md` — the **active plan** (3 tracks + status, receipt-gated)
+> - `docs/SILICON_FINDINGS.md` — what's true/false with receipts (reliability era)
+> - `docs/SILICON_MATH_INVENTORY.md` — which math is REAL vs scaffold (read from the code)
+> - `docs/SILICON_MATH_TOOLBOX.md` — problem→tool map (congestion vs coherence vs Yoneda)
+> - `docs/SESSIONS.md` — full chronological log (newest on top)
+> - `domains/silicon/sta_flows/` — reproducers + hashes for the real EDA runs
 
 ## 1. What this is, in one paragraph
 
-A **reliability co-design layer for chips**: point it at a real layout and it finds where the
-chip will physically stress (power/IR-drop, electromigration), proposes a materials/geometry
-fix grounded in *cited* data, and **proves** the fix (gain vs cost) — with a checkable receipt
-on every claim, and a trust gate that lets you use black-box AI tools without trusting them
-blindly. Built on real industrial tools (OpenSTA, OpenROAD/Yosys) and tested against real
-measured output, not simulations.
+A **verification-backed co-design layer for chips**: point it at a real layout and it finds
+where the chip will physically stress, proposes grounded fixes, and **proves** them — with a
+checkable receipt on every claim. Two product framings now coexist: (A) the **mature-node
+reliability layer** (IR-drop / EM hotspots, proven), and (B) the **post-Moore co-optimization
++ pattern-fidelity/trust** frontier (interconnect delay, 3D thermal, multi-view + multi-
+patterning coherence) — aimed at the Huawei-τ / TSMC-multipatterning / Intel-DSA reality.
 
-## 2. The honest bottom line (read this first)
+## 2. The discipline (the moat — do not break it)
 
-- **What works (measured):** cheap structural analysis predicts where a chip browns out
-  (real IR-drop, **+0.5–0.6**) and where the real electromigration current flows (**+0.64**),
-  validated on two real 45nm designs with clean controls.
-- **The hard boundary:** this holds at **mature nodes only** (~28–130nm). At **7nm it fails
-  and even inverts** — there IR-drop is dominated by the resistive power grid, not local
-  current. That's most chips by volume (automotive/IoT/analog/power/MCU), stated honestly
-  rather than over-claimed.
-- **What does NOT work:** predicting **timing** from cheap structure (falsified — the
-  optimizer flattens slack). We don't compete on timing; that's what STA is for.
-- **Learning helps modestly:** a learned model beats the cheap baseline on held-out data
-  (+0.57 vs +0.48, +0.66 vs +0.60), and the trust gate blocks models that don't generalize.
-- **The differentiator:** incumbents *compute* IR/EM; none connect that stress to a grounded,
-  *proven* materials fix with a receipt per step — and none gate black-box AI behind it.
+- A capability counts only with a **measured/cited receipt** and a **shuffle/held-out control**.
+  Proposal ≠ verification (scores/curvature/embeddings only propose; COG + HonestyGate verify).
+- **Evidence tiers stay honest:** `measured` (real tool output) > `measured_proxy` (SPEF) >
+  `validated_hypothesis` (cited physics + geometry) > `literature_value`. Never promote.
+- **Dormant math wires in only when it passes a real measured chip test** — never for show.
+- When pointed at code, **read the whole file**, not the docstring (see the math inventory).
 
-## 3. What's built (the pipeline)
+## 3. What's proven — the receipts (all on real EDA output)
 
-| Module (`domains/silicon/`) | Role |
+| Result | Receipt |
 |---|---|
-| `ir_scoreboard.py` | the core measured win: does structure predict real IR-drop? (validation) |
-| `em_scoreboard.py` | same, vs real measured EM current (+0.64) |
-| `hotspot.py` | the detector: rank stress tiles + at-risk nets from layout alone, no power sim |
-| `interconnect.py` | propose a metal swap (Cu→W/Ru/Co) on the EM-vs-resistance tradeoff |
-| `materials_grounding.py` | cross-validate metal properties vs CITED data; Jmax + melting-point grounding |
-| `codesign_loop.py` | find→fix→**prove**: EM gain (Black's eq) vs resistance cost; keep only if it nets out |
-| `reliability.py` | the product: one report (WHERE + WHAT + WHY/evidence-ladder) |
-| `trust_layer.py` | gate any external proposer: keep if grounded, BLOCK if fabricated |
-| `ml_hotspot.py` | a real learned predictor, trust-gated on held-out data (beats the cheap baseline) |
+| Mature-node IR-drop from cheap structure | +0.5–0.6 Spearman, clean control (ir_scoreboard) |
+| Measured EM current from structure | +0.64 (em_scoreboard) |
+| **Track 1 — interconnect (τ) delay** | proxy fanout **+0.61**; **measured** net-delay **+0.645** (tau_scoreboard) |
+| **Track 2 — 3D thermal cross-die coupling** | **8/8** Open3DBench designs; directional (sink-far die) (thermal3d_scoreboard) |
+| **Track 3A — multi-view net coherence** | real orfs_gcd verilog/def/spef → **H0=1, H1=0**; obstruction-localization proven (fidelity_coherence) |
+| **Track 3B — double-patterning native conflicts** | real GDS layer-13 shapes → **not 2-colorable, native conflicts localized**, BFS↔spectral agree (dp_conflict + gds) |
 
-Materials data was lifted/grounded from the sibling repo
-`C:\Users\JAMES\github\KOMPOSOS-IV-CHEM` (`metal_bridge/material_properties.py`, cited ASM/Smithells).
+**Honest boundaries (don't over-claim):** cheap structure does NOT predict gate-level timing
+slack (optimizer flattens it — that's STA's job); the IR/EM win is **mature-node only** (fails
+& inverts at 7nm); the within-die "chiplet" proxy was weak (real win needed real 3D data);
+NoC routing-load is routing theory, not ours; triple+ patterning is NP-hard coloring, not
+cohomological (only double-patterning is a clean Z/2 H¹ fit).
 
-## 4. How to run it
+## 4. Where each track stands (see SILICON_POSTMOORE_PLAN.md)
 
-```bash
-# the product — one report on a real layout:
-python -m domains.silicon.agent_tools \
-    --def <design>.def --spef <design>.spef --lef Nangate45.lef reliability
+- **Track 1 (τ interconnect delay) — DONE**, both tiers.
+- **Track 2 (3D thermal multi-die) — DONE** (Open3DBench). Open: per-die DEFs via their MoL
+  flow would add placement geometry + 3D τ.
+- **Track 3 (EPE/DSA pattern-fidelity coherence) — engine BUILT + wired:**
+  - Step A DONE: H⁰/H¹ coherence engine wired to real silicon (verilog/def/spef).
+  - Step B first cut DONE: double-patterning native-conflict localization on **real GDS metal
+    shapes** (Z/2 obstruction, two methods agreeing).
+  - **Open:** resolve SREF cell-internal metal (currently top-cell routing only); **OpenMPL**
+    ground-truth cross-check (build it, run ISCAS/ISPD'19, confirm our localized native
+    conflicts match its decomposer); then wire the verdict through the trust gate +
+    corroboration/specificity (oracle cluster). Foundry-measured EPE stays gated.
 
-# the core validations (need the gitignored real artifacts; regenerate via sta_flows):
-python -m domains.silicon.ir_scoreboard      # structure vs real IR-drop
-python -m domains.silicon.em_scoreboard      # structure vs real EM current
-python -m domains.silicon.ml_hotspot         # learned model vs baseline, trust-gated
-python -m domains.silicon.codesign_loop      # find->fix->prove portfolio
-python -m domains.silicon.trust_layer        # black-box proposer gating demo
+## 5. How to run the key things
 
-python -m pytest tests/ -q                   # full suite (green at handoff)
+```powershell
+python -m domains.silicon.tau_scoreboard         # Track 1: structure vs interconnect delay
+python -m domains.silicon.thermal3d_scoreboard   # Track 2: 3D cross-die thermal coupling
+python -m domains.silicon.fidelity_coherence     # Track 3A: 3-view net coherence (H0/H1)
+python -m domains.silicon.dp_conflict            # Track 3B: double-patterning native conflicts (real GDS)
+python -m pytest tests/ -q                       # full suite (run it first to confirm green)
 ```
 
-To regenerate real data (Docker + OpenROAD, see `sta_flows/README.md`):
-mint a layout with ORFS (`make DESIGN_CONFIG=designs/nangate45/<d>/config.mk`), then run
-`analyze_power_grid` for the IR/EM `.rpt`. Real artifacts live under `domains/silicon/data/`
-(gitignored; reproducible from the committed flows).
+Real-data tests **skip** when the gitignored artifacts are absent. Key local data (all under
+`domains/silicon/data/`, gitignored, regenerable): `sta_45gcd/` (detailed SPEF + net-delay),
+`orfs_gcd/results/base/` (self-minted 6_final.v/.def/.spef/.gds — the Track-3 source),
+`orfs_aes|ibex/` + `ir_*` (IR/thermal), `open3dbench/` (3D thermal), `rapidchiplet/` (chiplet
+graphs). **Docker works** (server 29.5.3; `openroad/orfs` + `openroad/opensta` images cached)
+— the old "blocked" notes are stale. STA/IR/thermal reproducers + hashes in `sta_flows/`.
 
-## 5. Important context for whoever resumes
+## 6. The math, honestly (so you don't re-hand-wave it)
 
-- **The system is much bigger than the product uses.** The reliability product imports local
-  silicon modules plus the lightweight core bridge/category/types/honesty gate path; the
-  boundary is guarded by `tests/test_silicon_product_boundary.py`. ~50k lines of math
-  (oracle/geometry/zfc/categorical/operadum/PRONOIA/cog/...) are **dormant** relative to it.
-  The proven value is the *discipline*
-  (receipts/grounding) + the *materials↔layout bridge*, NOT the exotic math. Do not bolt the
-  dormant engines in for show — only wire one in if it passes a real measured test like
-  everything else. That's the project's own honesty rule.
-- **Evidence tiers are sacred:** `measured` (real tool output) > `measured_proxy` (SPEF) >
-  `validated_hypothesis` (cited physics + geometry) > `literature_value` (cited bulk props).
-  Never promote a tier dishonestly.
-- **"Meaningful" = built on a validated step AND checkable against real data.** Don't stack an
-  unvalidated step on a broken one (why the 7nm swap test was moot — the detector fails there).
+Read the code, not docstrings. From `docs/SILICON_MATH_INVENTORY.md`:
+- **REAL & ready:** the oracle coherence/horns/yoneda cluster (corroboration + specificity +
+  contradiction, benchmarked AUROC ~0.98); `topology/persistent_sheaves.py` exact H⁰/H¹ +
+  `h1_support`; `domains/silicon/coherence.py` + `verilog.py`; geometry (Ricci/Fiedler) for
+  congestion.
+- **Scaffold/stub:** `hott/` (homotopy.py/geometric_homotopy.py real; J/transport stubbed) and
+  `cubical/` (data model faithful, Kan-fill/transport NOT computed — docstrings overclaim).
+- The coherence pattern (object = Yoneda profile; hypothesis = unfilled inner horn; coherence =
+  independent views agree, specificity-weighted, contradictions filtered) is the trust layer
+  for EPE/DSA. The rest of the ~60k-line math stack is **not** required by the product.
 
-## 6. What's open (honest)
+## 7. The strategic question (still open, it's a market call not a coding one)
 
-- **Edge #1 (not done, low value):** a sub-7nm design would exercise the metal-swap branch —
-  but the detector fails at 7nm, so it isn't grounded there. Skip unless you want completeness.
-- **Firm up the 7nm boundary:** the node-failure was one design on the default ASAP7 power
-  grid; a few more designs/PDN configs would separate "the node" from "this grid."
-- **Strategic question (the real one):** is the product the *mature-node reliability layer*,
-  or the *trust layer* (gate AI in EDA), or both? That's a market/customer question now, not a
-  coding one — the tech for both is built and tested.
+Is the product the **mature-node reliability layer**, the **post-Moore co-optimization layer**
+(interconnect/thermal), or the **pattern-fidelity + trust layer** (gate black-box
+computational-litho / DSA-defect / AI-EDA tools behind a localized, corroborated obstruction
+receipt)? The tech for all three is built and tested. That choice drives what to harden next.
 
-## 7. One-line status
+## 8. One-line status
 
-A tested, honest, **mature-node** reliability co-design layer — proven detection (IR +0.5–0.6,
-EM +0.64), grounded fixes, a closed find→fix→prove loop, and a working trust gate over learned
-models — with its real boundary (fails at 7nm) documented rather than hidden. Green and pushed.
+A tested, honest chip co-design layer: mature-node IR/EM proven; interconnect-delay and 3D
+thermal won on real data; the coherence engine wired to real silicon and localizing
+double-patterning native conflicts on real GDS — with every boundary documented, not hidden.
+Green and committed at `06e27e7`.
