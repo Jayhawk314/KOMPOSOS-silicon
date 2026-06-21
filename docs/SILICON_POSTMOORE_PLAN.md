@@ -208,8 +208,16 @@ independent views of the same target → mask disagreement = a real H¹ obstruct
     NUMERIC binary run on identical inputs** — build-gated (C++/Boost/Limbo; no native toolchain
     here, Docker only; OpenMPL ships no in-repo benchmarks and its `cmdtest` is color_num=3,
     the triple-patterning NP-hard regime we explicitly do NOT subsume).
-- **Step C — wire the verdict through the trust gate + COG/honesty** (proposal→verification),
-  same discipline as the rest of the product.
+- **Step C — DONE ✅ (`coherence_trust.py`).** Both coherence verdicts (3A net-fidelity, 3B
+  double-patterning) now route through proposal→verification: an obstruction is TRUSTED only if
+  INDEPENDENT, specificity-weighted views corroborate it (IDF specificity + specificity-weighted
+  noisy-OR, the oracle coherence cluster's math reused without importing dormant modules), the
+  rationale grounds via `HonestyGate`, and the tier stays `structural_only` (foundry-EPE never
+  promoted). **3A:** witnesses = the 3 view-pairs; real orfs_gcd → 50 TRUSTED (2-pair) / 50
+  UNCORROBORATED (1-pair, e.g. `clk`). **3B:** trust unit = the frustrated COMPONENT (BFS
+  odd-cycle ⟂ spectral λ_min>0 genuinely independent at component granularity; an edge has only
+  one localizer); real M1 → 1 TRUSTED region localizing all 7143 conflicts. A global/non-specific
+  view cannot over-vouch (two global views → corrob 0.02). 12 tests.
 
 **Materials angle (distinctive):** DSA constraints are materials-statistical, so
 `materials_grounding.py` extends from metals to block-copolymer parameters (χ, pitch L₀,

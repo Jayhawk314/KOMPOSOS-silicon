@@ -38,6 +38,7 @@ patterning coherence) — aimed at the Huawei-τ / TSMC-multipatterning / Intel-
 | **Track 2 — 3D thermal cross-die coupling** | **8/8** Open3DBench designs; directional (sink-far die) (thermal3d_scoreboard) |
 | **Track 3A — multi-view net coherence** | real orfs_gcd verilog/def/spef → **H0=1, H1=0**; obstruction-localization proven (fidelity_coherence) |
 | **Track 3B — double-patterning native conflicts** | real GDS shapes, SREF-flattened → real dense **M1 not 2-colorable, 7143 native conflicts localized**; conflict rule verified == OpenMPL's; BFS↔spectral agree (dp_conflict + gds) |
+| **Track 3C — trust-gate the coherence verdict** | obstructions TRUSTED only on independent specificity-weighted corroboration + grounding; real orfs_gcd 3A 50/50 trusted/uncorroborated, 3B M1 1 trusted region; tier `structural_only` (coherence_trust) |
 
 **Honest boundaries (don't over-claim):** cheap structure does NOT predict gate-level timing
 slack (optimizer flattens it — that's STA's job); the IR/EM win is **mature-node only** (fails
@@ -59,10 +60,14 @@ cohomological (only double-patterning is a clean Z/2 H¹ fit).
     honesty bug (spectral silently skipped huge components → false 0); now scalable + honest.
   - Step B OpenMPL cross-check, DEFINITION level DONE: read OpenMPL's conflict construction and
     confirmed our rule is identical (euclidean gap < coloring_distance); aligned comparator to
-    its strict `<`. **Open:** the NUMERIC binary run on identical inputs (build-gated:
+    its strict `<`. (Open: the NUMERIC binary run on identical inputs is build-gated:
     C++/Boost/Limbo, Docker only; OpenMPL ships no in-repo benchmarks, its cmdtest is the
-    color_num=3 triple-patterning regime we don't subsume); then wire the verdict through the
-    trust gate + corroboration/specificity (oracle cluster). Foundry-measured EPE stays gated.
+    color_num=3 triple-patterning regime we don't subsume.)
+  - Step C DONE: `coherence_trust.py` routes BOTH coherence verdicts (3A + 3B) through
+    proposal→verification — TRUSTED only on independent, specificity-weighted corroboration +
+    HonestyGate grounding; tier stays `structural_only`. Trust unit is the net (3A) vs the
+    frustrated component (3B), per the genuine independent-localizer granularity. Foundry-
+    measured EPE still gated. **Open:** the OpenMPL numeric run (build-gated, above).
 
 ## 5. How to run the key things
 

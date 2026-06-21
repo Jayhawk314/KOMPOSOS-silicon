@@ -5,6 +5,36 @@
 
 ---
 
+## 2026-06-21 (later 2) — Track 3 Step C: trust-gate the coherence verdict (3A + 3B) ✅
+
+Wired the obstruction verdicts of BOTH coherence tracks through the proposal→verification
+discipline (CLAUDE.md #1). New `domains/silicon/coherence_trust.py`: a localized obstruction
+is TRUSTED only if INDEPENDENT, specificity-weighted views corroborate it — then the rationale
+grounds via the shared `HonestyGate`, and the tier stays `structural_only` (foundry-EPE never
+promoted, #8).
+- **Reused the oracle coherence cluster's MATH, not its module** (respects the product-import
+  boundary — only `core.category` + `core.honesty_gate` + the silicon producers are imported):
+  IDF specificity `spec(w)=log(N/breadth(w))/log(N)` + specificity-weighted noisy-OR
+  `1−∏(1−conf·spec)` from `oracle/coherence_specificity.py`. A witness that flags a large
+  FRACTION of items (a global rename in 3A; the per-component spectral signal in 3B) gets
+  spec≈0 and cannot over-vouch; a localized witness carries the verdict.
+- **3A adapter (net-fidelity):** witnesses = the three view-PAIRS flagging a net. On real
+  orfs_gcd: of 100 divergent nets, **50 TRUSTED** (flagged by 2 independent pairs, corrob 0.60,
+  grounded) vs **50 UNCORROBORATED** (1 pair only — e.g. `clk`, corrob 0.37 — a likely
+  single-tool representational artifact, honestly held back). Exactly the plan's intent.
+- **3B adapter (double-patterning):** an EDGE has only ONE edge-level localizer (BFS), so
+  edge-level "independent corroboration" would be dishonest. The two methods genuinely agree at
+  COMPONENT granularity (combinatorial BFS odd-cycle ⟂ linear-algebraic spectral λ_min>0), so
+  the trusted unit is the frustrated COMPONENT (the native-conflict region); its BFS edges are
+  the localized `support`. Real flattened M1: **1 TRUSTED region (6076 features), corrob 1.00,
+  3 views agree, grounded — localizing all 7143 native conflicts**, tier `structural_only`.
+- `tests/test_silicon_coherence_trust.py` (12): IDF specificity, noisy-OR, two-specific→TRUSTED,
+  single-view→UNCORROBORATED, **two global views cannot over-vouch** (corrob 0.02), tier never
+  promoted; 3B trusts frustrated-not-bipartite components + localizes edges; 3A multi-pair
+  trusted / single-pair not / global-pair down-weighted; real-data discrimination on both.
+- **Decision:** the trust unit differs by track (net for 3A, component for 3B) because the
+  independent-localizer granularity genuinely differs — encoded honestly rather than forced.
+
 ## 2026-06-21 (later) — Track 3 Step B: SREF-flatten real cell-internal metal + scalable spectral check ✅
 
 Retired the documented honest boundary "top-cell routing only" on the GDS double-patterning
