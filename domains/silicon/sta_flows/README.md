@@ -141,6 +141,36 @@ d2be5422…b0b83  45_gcd.report_checks.txt   (OpenROAD STA, 48 violations)
 caa4e9b4…d43a7   Nangate45.lef              (tech+cell LEF)
 ```
 
+### tau net-delay (measured) — STAGED, pending one Docker run
+
+The tau scoreboard (`tau_scoreboard.py`) currently scores structure against an *extracted*
+Elmore R·C proxy (`measured_proxy`) and **PASSES on real 45_gcd** (fanout ρ **+0.610**,
+shuffle −0.018, 274 nets). The `measured`-tier upgrade scores structure against the tool's
+*own* per-net interconnect (wire) delay. To produce it, re-run STA with input-pin rows so
+wire-delay rows are emitted:
+
+```bash
+OUT="$PWD/domains/silicon/data/sta_45gcd"          # detailed-SPEF inputs already staged here
+cp domains/silicon/sta_flows/tau_netdelay_sta.tcl "$OUT"/
+gunzip -kf "$OUT/nangate45_typ.lib.gz"             # -> nangate45_typ.lib (read_liberty wants it)
+
+docker run --rm -v "$OUT:/work" \
+  --entrypoint /OpenROAD-flow-scripts/tools/install/OpenROAD/bin/openroad \
+  openroad/orfs:latest -no_init -exit /work/tau_netdelay_sta.tcl
+
+# -> 45_gcd.netdelay.report_checks.txt ; then the scoreboard auto-detects it:
+python -m domains.silicon.tau_scoreboard
+```
+
+`net_delay.py` attributes each load-input-pin row's incremental Delay to its net via the
+DEF pin→net map (driver pins excluded), and keeps the worst-case per net. Eligibility +
+receipt hash come from `load_sta` (netlist=`45_gcd.def`, liberty, sdc), so the result is
+`status: measured` only with the attested, hashed context — a fixture can exercise the
+parser but never pass. If the first run shows low net coverage, raise `-group_count` /
+`-endpoint_count` in the TCL. If the tool renders input-pin rows in a different columnar
+form, adjust `_ROW` in `net_delay.py` together with the fixture in
+`tests/test_silicon_net_delay.py` (which pins the expected format).
+
 ## Self-minted layout — full ORFS RTL→GDSII flow (`orfs_gcd`)
 
 The two runs above use layouts we *downloaded*. This one we **mint ourselves**: the full

@@ -29,7 +29,8 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Dict, Tuple
+from pathlib import Path
+from typing import Dict, Optional, Tuple
 
 from .netlist_bridge import NetlistBridge
 from .scoreboard import ScoreReport, collect_features, _score_features
@@ -91,6 +92,38 @@ def tau_scoreboard(def_path: str, spef_path: str, lef_path: str | None = None,
         source_kind="measured_proxy")
 
 
+def tau_scoreboard_measured(def_path: str, spef_path: str, lef_path: Optional[str],
+                            sta_report: str, design: Optional[str] = None, seed: int = 0,
+                            sta_source_kind: str = "unverified",
+                            sta_context_paths: Optional[Dict[str, str]] = None
+                            ) -> ScoreReport:
+    """`measured`-tier tau test: structure vs the tool's own per-net interconnect delay.
+
+    `sta_report` is an OpenSTA/OpenROAD `report_checks` run with `-fields {input_pins ...}`
+    and loaded parasitics (see `sta_flows/tau_netdelay_sta.tcl`). Evidence eligibility and
+    the receipt hash come from `load_sta`: it is `measured` only when attested `tool` with
+    hashed netlist/liberty/constraints context -- a fixture can exercise this but never pass.
+    """
+    from .net_delay import net_wire_delays
+    from .sta import load_sta
+
+    bridge = NetlistBridge(def_path, spef_path, lef_path=lef_path)
+    bridge.load()
+    report = load_sta(sta_report, source_kind=sta_source_kind,
+                      context_paths=sta_context_paths)
+    text = Path(sta_report).read_text(encoding="utf-8", errors="ignore")
+    delay = net_wire_delays(text, bridge)
+
+    feats = [f for f in collect_features(bridge, require_cap=False) if f.net in delay]
+    target = [delay[f.net] for f in feats]
+    return _score_features(
+        feats, target,
+        design=design or os.path.basename(def_path),
+        target="interconnect_net_delay", seed=seed,
+        evidence_eligible=report.is_evidence,
+        source_kind=report.source_kind, source_sha256=report.sha256)
+
+
 def main() -> None:
     print("KOMPOSOS-V | silicon tau (interconnect-delay) scoreboard")
     print("=" * 62)
@@ -109,6 +142,20 @@ def main() -> None:
     print("Predictors are SPEF-free; the target IS extracted R*C. A positive spearman")
     print("with a near-zero shuffle control = interconnect delay is structurally visible")
     print("(unlike gate slack, which the optimizer flattens).")
+
+    # measured-tier upgrade: structure vs the tool's own per-net interconnect delay.
+    nd = f"{base}/45_gcd.netdelay.report_checks.txt"
+    if os.path.exists(nd):
+        print("\n--- measured tier (STA net delay) ---")
+        mrep = tau_scoreboard_measured(
+            dp, sp, lp if os.path.exists(lp) else None, nd, design="45_gcd",
+            sta_source_kind="tool",
+            sta_context_paths={"netlist": dp, "liberty": f"{base}/nangate45_typ.lib.gz",
+                               "constraints": f"{base}/45_gcd.sdc"})
+        print(mrep.render())
+    else:
+        print(f"\n[measured tier pending] run sta_flows/tau_netdelay_sta.tcl to produce")
+        print(f"  {nd}  (Docker + OpenROAD; see sta_flows/README.md)")
 
 
 if __name__ == "__main__":

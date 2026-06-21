@@ -30,8 +30,17 @@ the falsifiable test:
   control **−0.018**. **Interconnect delay is structurally visible — unlike gate slack.**
   This is the τ thesis landing on terms we win on, with a receipt.
 - **Honest scope:** target is a *lumped* Elmore R·C proxy (measured_proxy), not STA net
-  delay. The `measured` upgrade is an STA `report_checks -fields {net}` re-run (Docker),
-  documented as Track 1's next step.
+  delay.
+- **Then STAGED the `measured` upgrade** (code + tests ready, only a Docker run left):
+  `net_delay.py` parses load-input-pin rows from `report_checks -fields {input_pins ...}`
+  and attributes each row's wire delay to its net via the DEF pin→net map (driver pins
+  excluded; worst-case per net). `tau_scoreboard_measured()` scores structure vs that,
+  with `measured` eligibility + receipt hash from `load_sta` (netlist=DEF, liberty, sdc).
+  Flow `sta_flows/tau_netdelay_sta.tcl` + README section emit
+  `45_gcd.netdelay.report_checks.txt`; the CLI auto-detects it. The parse contract is
+  pinned by `tests/test_silicon_net_delay.py` (4) so it's testable before the Docker run.
+  The synthetic fixture is the format spec; adjust `_ROW` + fixture together if a tool
+  version differs. (8 tau+net_delay tests green.)
 - **Tracks 2 (system/package geometry) and 3 (EPE/DSA pattern-fidelity coherence + BCP
   grounding via the dormant sheaf math)** are designed in the plan but **gated on data we
   don't have locally** — honest probes, not built.

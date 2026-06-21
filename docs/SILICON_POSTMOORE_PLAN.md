@@ -58,9 +58,13 @@ physical family we win on, not the optimizer-flattened slack we lose on.
   detailed SPEF (R from `*RES`, C from `*D_NET`), score structural predictors
   (fanout, wirelength, degree, curvature, driver/sink area — all SPEF-free) against it,
   with the standard shuffle control. Data in hand (`data/sta_45gcd/` detailed SPEF).
-- **(next, `measured`)** re-run STA with `report_checks -fields {net cap}` so net (wire)
-  delay is broken out per stage; score structure vs the tool's own interconnect delay.
-  Needs a Docker/OpenROAD re-run (documented in `sta_flows/`).
+- **(STAGED, `measured`)** `net_delay.py` + `tau_scoreboard_measured()` score structure vs
+  the tool's *own* per-net interconnect delay: parse load-input-pin rows from
+  `report_checks -fields {input_pins ...}` and attribute each row's wire delay to its net
+  via the DEF pin→net map (driver pins excluded). Parser + contract are tested now
+  (`tests/test_silicon_net_delay.py`); the only remaining step is one Docker run of
+  `sta_flows/tau_netdelay_sta.tcl` to emit `45_gcd.netdelay.report_checks.txt`, after which
+  the CLI auto-detects it and reports `status: measured`.
 
 **Why it matters:** if structure predicts wire-delay, we have a τ-aligned cheap screen for
 the metric Huawei just declared the scaling axis. If it doesn't, that's honest signal that
