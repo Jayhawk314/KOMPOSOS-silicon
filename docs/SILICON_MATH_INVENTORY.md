@@ -59,6 +59,21 @@ constraint over-vouching) — and it is the SAME corroboration+specificity shape
 trust gate. **This cluster, not hott/cubical, is the ready coherence engine.** (Lift still
 gated on real Track-3 data + a measured test, per the discipline.)
 
+## Chip-coherence stack (the Track-3 engine) — READ IN FULL — Tier A (real)
+
+| File | What the code actually does | Verdict |
+|---|---|---|
+| `topology/persistent_sheaves.py` | Two subsystems. (1) `CellularSheaf`: sections + restriction maps, `local/global_coherence`, `coboundary` (signed δ⁰/δ¹), `total_variation` = ‖δ⁰x‖² (Hansen-Ghrist sheaf Laplacian), `PersistentSheafComputer` (PH + coherence-across-filtration). (2) **`CellularCochainComplex`**: exact finite C⁰→C¹→C², *verifies* δ¹∘δ⁰=0, `cohomology()` = H⁰ (`ker δ⁰`), H¹ (`ker δ¹ / im δ⁰`) via SVD, **plus `h1_support`** (which edges carry the obstruction). | **Real cohomology**, not heuristic. The exact cochain complex is the gluing-obstruction engine. (1) is scalar/heuristic for β₀ but grounded; (2) is the load-bearing part for chips. |
+| `domains/silicon/coherence.py` | `analyze_calibration_nerve` → builds `simplicial_cochain_complex` from artifacts/calibrations/certificates, returns H⁰/H¹ + support. `analyze_crosswalk_cohomology`: builds verilog↔def↔spef calibrations **only where evidence justifies them**, and refuses to invent verilog↔spef (derived through def) → a 2-view chain correctly gives H¹=0. | **Real, honest adapter.** Already wires the cohomology engine to silicon. Won't manufacture obstructions. |
+| `domains/silicon/verilog.py` | `parse_verilog` (structural gate netlist: modules/ports/wire decls/named-port instances/constants). `build_crosswalk`: matches logical↔physical nets by **terminal-set identity** (frozenset of (inst,pin)), so synthesis renaming doesn't break it; reports renamed/logical_only/physical_only/cell_mismatches. | **Real.** The independent *logical* view + structural crosswalk. |
+
+### Verdict for chips
+The Track-3 coherence engine **exists and is tested** (exact H⁰/H¹ + support, plus a silicon
+adapter and a logical-view parser). The gap is NOT math — it's a genuine *third independent
+view* and real data. Multi-patterning (N masks of one layer) supplies that structure; the
+oracle corroboration+specificity cluster supplies the trust-weighting. See
+`docs/SILICON_POSTMOORE_PLAN.md` Track 3.
+
 ## Not prioritized (per user scoping) — read only if a specific file is flagged
 - oracle/ (remaining 40 files), topology/ (4), categorical/ (20), zfc/ (13), cog/ (7),
   geometry/ (23), game/ (3), operadum/ (121). `topology/persistent_sheaves.py` is the one

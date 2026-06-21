@@ -126,37 +126,72 @@ OTHER die?*
 - **Next:** pull Open3DBench per-die DEFs (their MoL flow) to run the placement geometry +
   extend the τ measured net-delay test to 3D.
 
-## Track 3 — EPE / DSA pattern-fidelity coherence (TSMC + Intel). **Gated research probe.**
+## Track 3 — multi-view pattern-fidelity coherence (TSMC EPE + Intel DSA). **Engine BUILT; data-gated.**
 
 **Unification:** TSMC's **Edge Placement Error** and DSA's **placement error** are the same
 shape — "did the realized pattern register to design intent, and where does it deviate?"
-Our dormant **sheaf H⁰/H¹ cohomology** (`topology/persistent_sheaves.py`) already localizes
-where multiple views of one artifact fail to cohere. One dormant-math home, two strategies
-served: a **pattern-fidelity coherence layer** (multi-patterning masks *or* DSA
-template→assembly) that localizes the obstruction.
 
-**Materials angle (our distinctive asset):** DSA's constraints are materials-statistical, so
-`materials_grounding.py` extends naturally from metals to block-copolymer parameters
-(χ, natural pitch L₀, defect energetics) — grounded, cited, receipted. And the trust gate is
-purpose-built for trusting stochastic defect/computational-litho models under uncertainty.
+**The engine already exists and is tested** (audited 2026-06-20, files read in full —
+`docs/SILICON_MATH_INVENTORY.md`):
+- `topology/persistent_sheaves.py` → `CellularCochainComplex`: exact H⁰/H¹ via SVD, verifies
+  δ¹∘δ⁰=0, and **localizes `h1_support`** (which edges carry the obstruction).
+- `domains/silicon/coherence.py` → `analyze_calibration_nerve` already wires it to silicon,
+  and honestly refuses to invent unjustified calibrations.
+- `domains/silicon/verilog.py` → the independent *logical* view (terminal-set crosswalk).
+- Trust-weighting: the oracle **corroboration + specificity** cluster (`horns_retrodiction`,
+  `coherence_specificity`) — a deviation is real only if multiple independent views
+  corroborate it, down-weighted so a non-specific/global view can't over-vouch.
 
-**Honest blocker:** real EPE/defect/placement-error data lives on foundry/research 300mm
-pilot lines — far harder to get than ORFS output. This is a **research probe gated on data**,
-not a near-term product claim. Per the rule: no coherence claim without a measured test.
+So Track 3 is **not a math build** — it needs (a) a genuine *third independent view* (the
+current verilog↔def↔spef is a 2-view chain → H¹=0 by construction), and (b) real data + a
+measured test. **Multi-patterning supplies (a) for free:** N masks of one layer are N
+independent views of the same target → mask disagreement = a real H¹ obstruction, and
+`h1_support` localizes the EPE-risk features.
+
+### The buildout (receipt-gated, chip-first)
+- **Step A — prove the obstruction-localization end-to-end on data we HAVE (no new data).**
+  Add an independent 3rd calibration to the existing nerve (e.g. STA-derived net identity, or
+  a second extraction) so a *planted* inconsistency yields H¹≠0 localized to the right net.
+  We already hold verilog + def + spef + real STA. Deliverable: a test that the cohomology
+  flags and localizes a real injected mismatch. *Doable now.*
+- **Step B — multi-patterning decomposition coherence (the real frontier, data-gated).**
+  Take a layer decomposed into masks (a decomposition tool or dataset), build the mask-nerve
+  (target + masks as vertices, mask↔target + mask-overlap calibrations as edges/faces), and
+  validate `h1_support` against real EPE/overlap-error data. Gate with the oracle
+  corroboration+specificity pattern (a feature is an EPE risk only if mask-pairs corroborate).
+- **Step C — wire the verdict through the trust gate + COG/honesty** (proposal→verification),
+  same discipline as the rest of the product.
+
+**Materials angle (distinctive):** DSA constraints are materials-statistical, so
+`materials_grounding.py` extends from metals to block-copolymer parameters (χ, pitch L₀,
+defect energetics) — cited, receipted.
+
+**Honest blocker (unchanged for Steps B/C):** real EPE/defect/placement-error data lives on
+foundry/research 300mm pilot lines. Step A removes the "is the engine even wired" risk now;
+Steps B/C stay gated on data + a measured test. No coherence claim ships without one.
+
+**Why this is chip work, not math:** this is the *pattern-fidelity + trust* half of the
+product (the TSMC-EPE / Intel-DSA wedge from §reframe) — gate black-box computational-litho /
+DSA-defect models behind a localized, corroborated obstruction receipt.
 
 ---
 
 ## Sequence (by actionability, not by appeal)
 
-1. **Track 1 now** — prove (or falsify) structure→interconnect-RC on real `45_gcd`. Data in
-   hand. *(This session.)*
-2. **Track 1 measured upgrade** — STA `-fields {net}` net-delay re-run when Docker is up.
-3. **Track 2** — acquire a package/chiplet layout; re-aim existing geometry; validate.
-4. **Track 3** — pursue EPE/DSA coherence + BCP grounding *iff* real placement-error data
-   becomes available; until then it stays a designed, unbuilt probe.
+1. **Track 1 — DONE** (both tiers): structure predicts interconnect RC (proxy +0.61) and the
+   tool's own net delay (measured +0.645). ✅
+2. **Track 2 — DONE** (real multi-die): 3D cross-die thermal coupling on Open3DBench, 8/8
+   designs, directional (sink-far die), measured. ✅
+3. **Track 3 Step A — next, doable now:** prove H¹ obstruction-localization end-to-end on the
+   verilog/def/spef(+STA) data we already hold (inject a mismatch → cohomology flags +
+   localizes it). Removes the "is the engine wired" risk. *No new data.*
+4. **Track 3 Steps B/C — data-gated:** multi-patterning mask-nerve coherence vs real EPE data,
+   gated by oracle corroboration+specificity, wired through the trust gate. Needs foundry/
+   research placement-error data + a measured test.
 
-The honest order: earn the τ receipt we *can* get, and use it to earn the right to chase the
-materials/variability frontier where DSA's deepest fit — but hardest data — lives.
+The honest order: Tracks 1–2 banked with measured receipts; Track 3's *engine is built and
+audited* (exact H⁰/H¹ + silicon adapter), so Step A is a wiring proof on data in hand, and the
+frontier (EPE/DSA) is the data-gated part — not a math build.
 
 ## Sources
 
