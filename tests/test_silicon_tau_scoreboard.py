@@ -108,3 +108,27 @@ def test_tau_scoreboard_measured_on_real_45gcd():
     assert rep.passed                      # clean PASS at full net coverage
     assert rep.best[1] > 0.4               # structure predicts measured wire delay
     assert abs(rep.control_rho) < 0.20
+
+
+_ORFS = "domains/silicon/data/orfs_gcd/results/base"
+
+
+@pytest.mark.skipif(
+    not os.path.exists(f"{_ORFS}/6_final.netdelay.report_checks.txt"),
+    reason="orfs_gcd net-delay report absent (run sta_flows/orfs_gcd_netdelay_sta.tcl via Docker)")
+def test_tau_scoreboard_measured_on_real_orfs_gcd():
+    """measured tier on a SECOND real design (self-minted orfs_gcd): structure vs the tool's
+    own per-net interconnect delay. Lights up the `measured` tier beyond 45_gcd."""
+    rep = tau_scoreboard_measured(
+        f"{_ORFS}/6_final.def", f"{_ORFS}/6_final.spef",
+        "domains/silicon/data/openlane/Nangate45.lef",
+        f"{_ORFS}/6_final.netdelay.report_checks.txt", design="orfs_gcd",
+        sta_source_kind="tool",
+        sta_context_paths={"netlist": f"{_ORFS}/6_final.v",
+                           "liberty": "domains/silicon/data/early_gcd/NangateOpenCellLibrary_typical.lib",
+                           "constraints": f"{_ORFS}/6_final.sdc"})
+    assert rep.target == "interconnect_net_delay"
+    assert rep.evidence_eligible and rep.source_kind == "tool"   # measured, attested + hashed
+    assert rep.passed
+    assert rep.best[1] > 0.4               # structure predicts measured wire delay (obs +0.845)
+    assert abs(rep.control_rho) < 0.20

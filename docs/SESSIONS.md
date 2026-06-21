@@ -5,6 +5,28 @@
 
 ---
 
+## 2026-06-21 (later 3) — Roadmap #1: light up the `measured` tier on a 2nd real design ✅
+
+Stepped back from the Track-3 frontier to the highest-credibility gap (named in VALUE.md and the
+whitepaper): the `measured` evidence tier was only lit on 45_gcd. Extended it to orfs_gcd, the
+design we hold in full.
+- New `sta_flows/orfs_gcd_netdelay_sta.tcl`: real OpenROAD STA (in-image nangate45 libs +
+  our routed 6_final.def/.spef/.sdc), `report_checks -fields {input_pins net ...}` → per-net
+  interconnect (wire) delay. Ran it in Docker (`openroad/orfs`): read 646 nets, produced a 7 MB
+  report. `net_delay.py` attributes load-pin rows to nets via the DEF pin→net map.
+- `tau_scoreboard_measured` on orfs_gcd, attested `tool` (hashed netlist/Liberty/SDC, sha256
+  a224877…): **structure predicts the tool's OWN per-net wire delay — wirelength ρ +0.845,
+  fanout +0.709, sink_area +0.781, degree +0.740, shuffle control −0.05, 545 nets.** Stronger
+  than the SPEF Elmore proxy (+0.768). The `measured` tier is now validated on TWO real designs
+  (45_gcd +0.65, orfs_gcd +0.845).
+- Wired into `tau_scoreboard.main()` + `tests/test_silicon_tau_scoreboard.py` (skip-guarded on
+  the gitignored report). Updated VALUE.md claim #1 (proxy → measured) and its boundary note;
+  ROADMAP #1 → done.
+- **Context:** this session re-grounded the work on its actual goal (visibility / foot-in-door,
+  not a product) and its honest value (VALUE.md / ROADMAP.md). The fancy math is the distinctive
+  HOOK; the cheap triage + now measured-validated delay is the PROOF. Next roadmap items: #4 (one
+  clean entry point + README), #5 (writeup), #2 (catch a real coherence fault).
+
 ## 2026-06-21 (later 2) — Track 3 Step C: trust-gate the coherence verdict (3A + 3B) ✅
 
 Wired the obstruction verdicts of BOTH coherence tracks through the proposal→verification

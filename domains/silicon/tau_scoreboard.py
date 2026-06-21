@@ -157,6 +157,21 @@ def main() -> None:
         print(f"\n[measured tier pending] run sta_flows/tau_netdelay_sta.tcl to produce")
         print(f"  {nd}  (Docker + OpenROAD; see sta_flows/README.md)")
 
+    # second real design (self-minted orfs_gcd): measured tier on data we hold in full.
+    o = "domains/silicon/data/orfs_gcd/results/base"
+    ond = f"{o}/6_final.netdelay.report_checks.txt"
+    if os.path.exists(ond):
+        print("\n--- measured tier on orfs_gcd (second real design) ---")
+        olef = "domains/silicon/data/openlane/Nangate45.lef"
+        orep = tau_scoreboard_measured(
+            f"{o}/6_final.def", f"{o}/6_final.spef",
+            olef if os.path.exists(olef) else None, ond, design="orfs_gcd",
+            sta_source_kind="tool",
+            sta_context_paths={"netlist": f"{o}/6_final.v",
+                               "liberty": "domains/silicon/data/early_gcd/NangateOpenCellLibrary_typical.lib",
+                               "constraints": f"{o}/6_final.sdc"})
+        print(orep.render())
+
 
 if __name__ == "__main__":
     main()
