@@ -73,7 +73,7 @@ def build_conflict_graph(feats: List[Feature], distance: float
                 if j <= i:
                     continue
                 _, xj, yj = feats[j]
-                if (xi - xj) ** 2 + (yi - yj) ** 2 <= d2:
+                if (xi - xj) ** 2 + (yi - yj) ** 2 < d2:   # strict: gap == distance is legal
                     adj[names[i]].add(names[j])
                     adj[names[j]].add(names[i])
     return names, adj
@@ -90,7 +90,11 @@ def build_conflict_graph_bbox(feats, distance: float) -> Tuple[List[str], Dict[s
     """Conflict edge between real shapes whose bounding-box GAP < distance (grid-indexed).
 
     feats: [(id, cx, cy, bbox)]. Correct for spacing (edge-to-edge), and handles long wires
-    by indexing each shape into every grid cell its distance-inflated bbox covers.
+    by indexing each shape into every grid cell its distance-inflated bbox covers. This is
+    OpenMPL's conflict rule (SimpleMPL.cpp update_conflict_relation): bloat each shape by the
+    coloring_distance, then connect adjacent shapes with euclidean_distance < coloring_distance.
+    For Manhattan metal (bbox == rectangle) this matches OpenMPL exactly; for non-rectangular
+    polygons OpenMPL takes the min over child-rects while we use the shape bbox (conservative).
     """
     cell = max(distance, 1.0)
     grid: Dict[Tuple[int, int], List[int]] = defaultdict(list)
@@ -108,7 +112,7 @@ def build_conflict_graph_bbox(feats, distance: float) -> Tuple[List[str], Dict[s
                 if key in checked:
                     continue
                 checked.add(key)
-                if _bbox_gap(feats[i][3], feats[j][3]) <= distance:
+                if _bbox_gap(feats[i][3], feats[j][3]) < distance:   # OpenMPL: strict <
                     adj[feats[i][0]].add(feats[j][0])
                     adj[feats[j][0]].add(feats[i][0])
     return [f[0] for f in feats], adj

@@ -17,8 +17,8 @@ analysis, and fixed a latent honesty bug it exposed.
   cell `gcd` has **4514 SREF instances**; flattened metal spans exactly 0–367250 db units =
   0–36.725 µm, corner-to-corner with the DEF DIEAREA. Units are 10000/µm (700 db = 70 nm).
 - **Real result — cell-internal metal is the dense layer.** M1 (layer 11) goes 25 → 6076
-  shapes once flattened; at 70 nm spacing it is NOT 2-colorable: **7303 native conflicts
-  localized**, spectral λ_min(D+A)=0.62. Layer 13 goes 1890 → 5076 (600 conflicts); layer 10
+  shapes once flattened; at 70 nm spacing it is NOT 2-colorable: **7143 native conflicts
+  localized**, spectral λ_min(D+A)=0.616. Layer 13 goes 1890 → 5076 (513 conflicts); layer 10
   flattens to 9483 shapes and is bipartite (0). M1 being the canonical double-patterning layer
   and only now visible is exactly the point.
 - **Bug found + fixed (honesty):** the dense data exposed that `spectral_frustration` silently
@@ -28,12 +28,24 @@ analysis, and fixed a latent honesty bug it exposed.
   — no component is ever skipped. Honest limit documented: the sparse estimate confirms
   bipartite-vs-frustrated by ORDER OF MAGNITUDE (convergence floor ~1e-5..1e-3; cannot certify
   a lone huge near-1D cycle). The EXACT verdict + localization always come from BFS Z/2.
-- `tests/test_silicon_dp_conflict.py` now 14 (was 6): GDS-real round-trip, bbox rotate/reflect,
-  SREF placement + transform + nested recursion, sparse-spectral scales to large dense
-  components (bipartite <1e-2, heavily-frustrated >0.1, agrees with BFS), real flattened M1
-  denser + native-conflict localization. All green; existing top-cell receipt unchanged.
-- **Still open:** OpenMPL conflict-graph ground-truth cross-check (needs a C++/Boost/Limbo
-  build — no native toolchain here, only Docker). Then wire the verdict through the trust gate.
+- **OpenMPL cross-check — definition level DONE (no build needed).** Read OpenMPL's actual
+  conflict-graph construction (`SimpleMPL.cpp` `update_conflict_relation`): bloat each shape by
+  `coloring_distance`, then connect adjacent shapes with `euclidean_distance < coloring_distance`.
+  That is identical to our `_bbox_gap` rule. Aligned our comparator from `<=` to OpenMPL's
+  strict `<` (also the correct physical convention — a gap EQUAL to min-spacing is legal, not a
+  violation). Effect: at min-width spacing the count drops to the genuinely sub-spacing
+  conflicts (top-cell L13 87 → 19; M1-flat 7303 → 7143; L13-flat 600 → 513) — more honest. For
+  Manhattan metal (bbox == rectangle) our rule matches OpenMPL exactly; for non-rect polygons
+  OpenMPL takes min-over-child-rects while we use the bbox (conservative, documented). The
+  remaining gap is purely the NUMERIC binary run on identical inputs — still build-gated
+  (C++/Boost/Limbo; OpenMPL ships no in-repo benchmarks, and its `cmdtest` uses color_num=3,
+  the triple-patterning NP-hard regime we explicitly do NOT subsume).
+- `tests/test_silicon_dp_conflict.py` now 15 (was 6): GDS-real round-trip, bbox rotate/reflect,
+  SREF placement + transform + nested recursion, OpenMPL strict-distance boundary rule,
+  sparse-spectral scales to large dense components (bipartite <1e-2, heavily-frustrated >0.1,
+  agrees with BFS), real flattened M1 denser + native-conflict localization. All green.
+- **Still open:** OpenMPL NUMERIC binary cross-check (build-gated, Docker only). Then wire the
+  verdict through the trust gate + corroboration/specificity.
 
 ## 2026-06-21 — Track 3 Step B first cut: double-patterning native-conflict localization (Z/2 H1) ✅
 

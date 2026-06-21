@@ -44,6 +44,17 @@ def test_triangle_has_localized_native_conflict():
     assert spectral_frustration(names, adj) > 1e-6        # spectral agrees: frustrated
 
 
+def test_conflict_rule_matches_openmpl_strict_distance():
+    # OpenMPL's rule (SimpleMPL update_conflict_relation): euclidean_distance < coloring_distance.
+    # A gap EXACTLY equal to the min spacing is legal (no conflict); strictly closer is.
+    from domains.silicon.dp_conflict import build_conflict_graph_bbox
+    at_spacing = [("a", 0, 0, (0, 0, 10, 10)), ("b", 0, 0, (20, 0, 30, 10))]   # gap == 10
+    _, adj = build_conflict_graph_bbox(at_spacing, distance=10.0)
+    assert adj["a"] == set()                              # gap == distance -> NOT a conflict
+    _, adj = build_conflict_graph_bbox(at_spacing, distance=10.5)
+    assert adj["a"] == {"b"}                              # strictly closer than distance -> conflict
+
+
 def test_even_cycle_is_colorable():
     # 4-cycle (square) is bipartite -> decomposable, no native conflict.
     feats = [("a", 0, 0), ("b", 2, 0), ("c", 2, 2), ("d", 0, 2)]
