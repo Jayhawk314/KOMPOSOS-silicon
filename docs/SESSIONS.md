@@ -5,6 +5,40 @@
 
 ---
 
+## 2026-06-20 (later) — resumed Codex's orphaned work + NEW τ WIN: interconnect delay IS structural ✅
+
+Resumed after a Codex session ran out of tokens mid-cleanup (`codexsesh.txt`). Two things:
+
+**1. Committed Codex's verified-but-orphaned cleanup** (`a38dce6`): the product-boundary
+audit (`docs/SILICON_PRODUCT_BOUNDARY.md`) + guard test, a lean-import refactor (lazy
+`flow_geometry`/`net_operad`; dropped redundant `bridge.load()` where only parsed
+nets/components are read — kept where `.category` is used), and docs sync. Full suite was
+green (282) at that boundary; focused product+boundary re-ran green (30).
+
+**2. Strategy → executed Track 1 of a new 3-track plan** (`docs/SILICON_POSTMOORE_PLAN.md`).
+Brainstormed the Huawei τ / TSMC multi-patterning / Intel DSA landscape: all three abandon
+transistor-shrink for **co-optimization** (DTCO/STCO) — exactly our slot. Key insight: we
+falsified structure→**gate slack** (optimizer flattens it), but Huawei's τ is about
+**interconnect delay** (R·C), the *un-flattened* family our IR/EM wins live in. So we built
+the falsifiable test:
+- `domains/silicon/tau_scoreboard.py` — extract per-net **Elmore RC** from detailed SPEF
+  (R from `*RES`, C from `*D_NET`; `measured_proxy`), score SPEF-free structural predictors
+  vs it with a shuffle control. `tests/test_silicon_tau_scoreboard.py` (4: RC-parse,
+  product ordering, reduced-SPEF R=0, real-45_gcd skip-if-absent). All pass.
+- **RESULT — PASS on real 45_gcd (274 nets):** fanout **+0.610** (prec@10 0.80), wirelength
+  +0.443, degree +0.373, curvature +0.299; driver_area −0.191 (correctly weak); shuffle
+  control **−0.018**. **Interconnect delay is structurally visible — unlike gate slack.**
+  This is the τ thesis landing on terms we win on, with a receipt.
+- **Honest scope:** target is a *lumped* Elmore R·C proxy (measured_proxy), not STA net
+  delay. The `measured` upgrade is an STA `report_checks -fields {net}` re-run (Docker),
+  documented as Track 1's next step.
+- **Tracks 2 (system/package geometry) and 3 (EPE/DSA pattern-fidelity coherence + BCP
+  grounding via the dormant sheaf math)** are designed in the plan but **gated on data we
+  don't have locally** — honest probes, not built.
+
+**Next:** the STA net-delay `measured` upgrade for Track 1; acquire a package/chiplet layout
+for Track 2; Track 3 stays a gated research probe pending real placement-error data.
+
 ## 2026-06-20 (later) — #3 measured tier UNBLOCKED: real OpenSTA report ingested ✅
 
 The host WSL/Docker fault from the earlier entry is **resolved** — user updated Docker;
