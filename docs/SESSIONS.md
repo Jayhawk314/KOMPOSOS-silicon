@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-06-21 — Track 3 Step B first cut: double-patterning native-conflict localization (Z/2 H1) ✅
+
+Scouted MPLD data (OpenMPL, ISCAS/ISPD'19) and found the honest math fit: double patterning
+(LELE) is feasible iff the conflict graph is 2-colorable iff no odd cycles iff Z/2 H1 = 0 —
+so the engine's job is to LOCALIZE native (unresolvable) conflicts. Triple+ patterning is
+NP-hard coloring (OpenMPL's domain), NOT cohomological — stated as the boundary.
+- Built the no-build first cut `domains/silicon/dp_conflict.py`: conflict graph from REAL cell
+  placements (orfs_gcd DEF, fillers excluded) — same-layer features within the coloring
+  distance — then the signed/Z2 obstruction two independent ways: (1) combinatorial BFS
+  2-coloring (frustrated edge = native conflict), (2) spectral max-over-components
+  lambda_min(D+A) (>0 iff a non-bipartite component). They AGREE.
+- **Real result on orfs_gcd (681 cells), distance sweep:** 1500 dbu → 2-colorable, 0 native
+  conflicts, frustration 0 (decomposable); 2500 dbu → NOT colorable, **81 native conflicts**,
+  frustration 1.0; 4000 dbu → 949 native conflicts, frustration 1.63. Clean colorable→native
+  transition; native conflicts **localized to specific feature pairs** (e.g. `_507_`,`clkload1`).
+- The signed/Z2 coboundary is the extension the plan called for (R-engine couldn't see odd
+  cycles). `tests/test_silicon_dp_conflict.py` (4: path/even-cycle colorable, triangle native
+  conflict localized, real-layer transition + BFS↔spectral agreement). 8 green w/ Step A.
+- **Honest scope:** features are a placement-proximity stand-in for layer shapes; tier is
+  tool/geometric decomposition-conflict, NOT foundry-measured EPE. Upgrades: real metal
+  shapes (GDS) + OpenMPL conflict-graph cross-check. But the engine now LOCALIZES native
+  double-patterning conflicts on a real layer, two methods agreeing — Step B has a receipt.
+
 ## 2026-06-20 (later) — Track 3 Step A DONE: H1 coherence engine wired to real chip artifacts ✅
 
 After auditing the chip-coherence stack in full (persistent_sheaves exact H0/H1 + h1_support;

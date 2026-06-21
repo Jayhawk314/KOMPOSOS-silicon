@@ -176,6 +176,14 @@ independent views of the same target → mask disagreement = a real H¹ obstruct
   is a **Z/2 / signed** obstruction, so add a signed (frustration) coboundary. Tier: tool/
   geometric decomposition-conflict (not foundry-measured EPE — that stays gated).
   Gate the verdict with the oracle corroboration+specificity pattern + the trust gate.
+  - **First cut DONE ✅ (`dp_conflict.py`).** Conflict graph from REAL cell placements
+    (orfs_gcd DEF) + the signed/Z2 obstruction two ways (combinatorial BFS 2-coloring +
+    spectral max-component `lambda_min(D+A)`), which AGREE. Distance sweep on 681 cells:
+    1500 dbu → 2-colorable, 0 native conflicts; 2500 → 81 native conflicts (frustration 1.0);
+    4000 → 949 (1.63) — a clean colorable→native transition, native conflicts **localized to
+    feature pairs**. `tests/test_silicon_dp_conflict.py` (4). The engine now localizes native
+    double-patterning conflicts on a real layer. *Upgrades:* real GDS metal shapes (vs
+    placement proxy) + OpenMPL conflict-graph ground-truth cross-check.
 - **Step C — wire the verdict through the trust gate + COG/honesty** (proposal→verification),
   same discipline as the rest of the product.
 
