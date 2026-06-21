@@ -5,6 +5,17 @@
 
 ---
 
+## 2026-06-21 (later 4) — Roadmap #4: one clean entry point + a 3-minute README ✅
+
+Made the value visible. `domains/silicon/api.py`: the single façade (whitepaper §7.2),
+`analyze(def, spef, lef) -> SiliconReport` returning evidence-tiered TRIAGE (risky nets ranked
+by the validated structural predictors) + SEAM (Fiedler chiplet split + crossing nets), with a
+CLI. On the committed sample it correctly isolates `n_bus` as the one net crossing the seam —
+from topology alone. `domains/silicon/README.md`: 3-minute front door (30-second no-download
+demo, the measured +0.845 result, the "disproved my own hypotheses" honesty hook); root README
+now points at it + VALUE.md/ROADMAP.md. `tests/test_silicon_api.py` (3, runs on the committed
+fixture); respects the product-import boundary. ROADMAP #4 → done.
+
 ## 2026-06-21 (later 3) — Roadmap #1: light up the `measured` tier on a 2nd real design ✅
 
 Stepped back from the Track-3 frontier to the highest-credibility gap (named in VALUE.md and the

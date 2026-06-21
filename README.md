@@ -9,9 +9,14 @@ with a checkable receipt you can trust without trusting the system.
 This is the **integration repo**: the first place all six engines live together,
 over one shared `Category`.
 
-> **Docs:** `docs/HANDOFF.md` (start here) · `docs/SILICON_FINDINGS.md` (receipts
-> and conclusions) · `docs/SILICON_PRODUCT_BOUNDARY.md` (unused/dormant math audit)
-> · `CLAUDE.md` (working rules) · `docs/SESSIONS.md` (work log).
+> **▶ The showcase vertical — start here:** [`domains/silicon/README.md`](domains/silicon/README.md)
+> (a verification-first triage layer for chip design, with a 30-second no-download demo and a
+> `measured`-tier result: cheap structure predicts a real EDA tool's own net delay at ρ +0.845).
+> The value writeup is [`docs/VALUE.md`](docs/VALUE.md); the roadmap is [`docs/ROADMAP.md`](docs/ROADMAP.md).
+>
+> **Other docs:** `docs/HANDOFF.md` · `docs/SILICON_FINDINGS.md` (receipts) ·
+> `docs/SILICON_PRODUCT_BOUNDARY.md` (dormant-math audit) · `CLAUDE.md` (working rules) ·
+> `docs/SESSIONS.md` (work log).
 
 ## What we're building now: silicon co‑design
 

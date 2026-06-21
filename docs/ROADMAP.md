@@ -28,10 +28,12 @@ front of the right eyes. Recommended order: **1 → 4 → 5 → 2 → 6 → 3.**
 
 ## Part B — Make the value seen (the actual goal: eyes on the work)
 
-- [ ] **4. One clean entry point + a 3-minute README.**
-  Build the `analyze(def, spef, lef) -> Report` façade (whitepaper §7.2) and a README that
-  leads with the one reproducible result from `VALUE.md`. A stranger runs one command, sees
-  value. Effort: low. Highest reach-per-hour.
+- [x] **4. One clean entry point + a 3-minute README.** ✅ DONE (2026-06-21)
+  `domains/silicon/api.py`: `analyze(def, spef, lef) -> SiliconReport` (triage + chiplet seam,
+  evidence-tiered) with a CLI (`python -m domains.silicon.api <def>`). `domains/silicon/README.md`:
+  3-minute front door — 30-second no-download demo on the committed sample, the measured +0.845
+  result, the "disproved my own hypotheses" honesty hook. Root README points at it.
+  `tests/test_silicon_api.py` (3, runs on the committed fixture).
 
 - [ ] **5. A short honest writeup / post — lead with the failures.**
   The idea, one validated result, and "I disproved two of my own hypotheses with controls."
