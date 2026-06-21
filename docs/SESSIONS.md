@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-06-20 (later) — Track 3 Step A DONE: H1 coherence engine wired to real chip artifacts ✅
+
+After auditing the chip-coherence stack in full (persistent_sheaves exact H0/H1 + h1_support;
+domains/silicon/coherence.py adapter; verilog.py logical view — all REAL), executed Track 3
+Step A: wire the obstruction engine to real silicon on data in hand (self-minted orfs_gcd:
+6_final.v + .def + .spef, a matched three-tool set).
+- `domains/silicon/fidelity_coherence.py`: three INDEPENDENT tool views of net connectivity —
+  verilog (synthesis), def (route), spef *CONN (extraction) — each as net→terminal-set;
+  cross-view identity by terminal set (rename-proof); per-net localization + artifact
+  calibration nerve → exact H0/H1 via the existing engine.
+- **REAL RESULT on orfs_gcd: H0=1, H1=0 — coherent, no cyclic obstruction.** 482/627 nets
+  agree exactly across all three tools. After stripping inconsistent name-escaping (def vs
+  spef), def~spef agreement 0.776→**0.915**; verilog lags (0.78–0.86) because the gate-netlist
+  parser doesn't capture sequential-cell driver pins (flop QN) the way def/spef do. So the
+  ~145 divergences are REPRESENTATIONAL (escaping + flop-pin scope), localized per net — not
+  logical faults. A genuine measured-tier coherence receipt on real silicon.
+- **H1 obstruction-localization demonstrated** on the cyclic (EPE-shaped) case: three views
+  pairwise-agree ≥0.75 but not jointly → unfilled triangle → H1=1, localized. Injected faults
+  localize to the offending net. `tests/test_silicon_fidelity_coherence.py` (4: clean-coherent,
+  cyclic-H1, fault-localized, real-orfs_gcd). All pass.
+- **Honest scope:** def+spef are both post-route (independent tools, not independent physics);
+  artifact-level H1 is the coarse global-cyclic bit. A genuinely cyclic, feature-level H1 needs
+  the N-masks-of-one-layer structure of multi-patterning — Track 3 Step B, still data-gated.
+  But Step A removes the "is the engine even wired to chips" risk: it is, with a receipt.
+
 ## 2026-06-20 (later) — Track 2 REAL multi-die win: 3D thermal cross-die coupling (Open3DBench) ✅
 
 Scouted public chiplet/3D datasets, pulled **Open3DBench** (`lamda-bbo/Open3DBench`, under

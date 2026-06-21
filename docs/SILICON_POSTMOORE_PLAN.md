@@ -149,11 +149,15 @@ independent views of the same target → mask disagreement = a real H¹ obstruct
 `h1_support` localizes the EPE-risk features.
 
 ### The buildout (receipt-gated, chip-first)
-- **Step A — prove the obstruction-localization end-to-end on data we HAVE (no new data).**
-  Add an independent 3rd calibration to the existing nerve (e.g. STA-derived net identity, or
-  a second extraction) so a *planted* inconsistency yields H¹≠0 localized to the right net.
-  We already hold verilog + def + spef + real STA. Deliverable: a test that the cohomology
-  flags and localizes a real injected mismatch. *Doable now.*
+- **Step A — DONE ✅ (`fidelity_coherence.py`).** Three independent tool views of net
+  connectivity on self-minted `orfs_gcd` — verilog (synth), def (route), spef `*CONN`
+  (extraction), each net→terminal-set, cross-view identity by terminal set. **Real result:
+  H0=1, H1=0 (coherent, no cyclic obstruction); 482/627 nets agree exactly across all three;
+  def~spef 0.915 after escaping normalization.** Divergences are representational (name
+  escaping + verilog flop-pin scope), localized per net — not logical faults. H¹
+  obstruction-localization demonstrated on the cyclic (EPE-shaped) case (unfilled triangle →
+  H1=1, localized); injected faults localize. `tests/test_silicon_fidelity_coherence.py` (4).
+  The engine is wired to real silicon with a receipt; the "is it even wired" risk is gone.
 - **Step B — multi-patterning decomposition coherence (the real frontier, data-gated).**
   Take a layer decomposed into masks (a decomposition tool or dataset), build the mask-nerve
   (target + masks as vertices, mask↔target + mask-overlap calibrations as edges/faces), and
@@ -182,9 +186,9 @@ DSA-defect models behind a localized, corroborated obstruction receipt.
    tool's own net delay (measured +0.645). ✅
 2. **Track 2 — DONE** (real multi-die): 3D cross-die thermal coupling on Open3DBench, 8/8
    designs, directional (sink-far die), measured. ✅
-3. **Track 3 Step A — next, doable now:** prove H¹ obstruction-localization end-to-end on the
-   verilog/def/spef(+STA) data we already hold (inject a mismatch → cohomology flags +
-   localizes it). Removes the "is the engine wired" risk. *No new data.*
+3. **Track 3 Step A — DONE ✅:** `fidelity_coherence.py` wires the exact H⁰/H¹ engine to real
+   `orfs_gcd` (verilog/def/spef three-view) → H0=1/H1=0 coherent receipt; cyclic case → H1=1
+   localized. The "is the engine wired to chips" risk is gone.
 4. **Track 3 Steps B/C — data-gated:** multi-patterning mask-nerve coherence vs real EPE data,
    gated by oracle corroboration+specificity, wired through the trust gate. Needs foundry/
    research placement-error data + a measured test.
