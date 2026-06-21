@@ -158,11 +158,24 @@ independent views of the same target → mask disagreement = a real H¹ obstruct
   obstruction-localization demonstrated on the cyclic (EPE-shaped) case (unfilled triangle →
   H1=1, localized); injected faults localize. `tests/test_silicon_fidelity_coherence.py` (4).
   The engine is wired to real silicon with a receipt; the "is it even wired" risk is gone.
-- **Step B — multi-patterning decomposition coherence (the real frontier, data-gated).**
-  Take a layer decomposed into masks (a decomposition tool or dataset), build the mask-nerve
-  (target + masks as vertices, mask↔target + mask-overlap calibrations as edges/faces), and
-  validate `h1_support` against real EPE/overlap-error data. Gate with the oracle
-  corroboration+specificity pattern (a feature is an EPE risk only if mask-pairs corroborate).
+- **Step B — multi-patterning decomposition coherence (scouted 2026-06-20).**
+  **The honest math fit (not cargo-cult):** double-patterning (LELE, K=2) is feasible iff the
+  conflict graph is 2-colorable iff it has **no odd cycles** — and an odd cycle is exactly a
+  **Z/2 H¹ obstruction** (graph frustration / signed-balance). So our exact-cohomology engine
+  can *localize the native double-patterning conflicts* (the unresolvable regions). Honest
+  boundary: triple+ patterning (K≥3) is NP-hard graph coloring (OpenMPL's domain, **not**
+  cohomological) — we do NOT subsume it; the clean fit is **double-patterning native-conflict
+  localization**.
+  **Data:** `OpenMPL` (github.com/limbo018/OpenMPL, open source, GDS→mask assignment + conflict
+  graph; ships ISCAS + ISPD'19 benchmarks) is the ground truth for native conflicts. **No-build
+  first cut:** the conflict graph is pure geometry — same-layer features within the coloring
+  distance = a conflict edge — so we can build it directly from a real DEF/GDS layer (data in
+  hand) and test whether our H¹ localizes the odd-cycle native conflicts, using OpenMPL only as
+  a cross-check later (it needs a C++/Boost/Limbo build).
+  **Small extension needed:** the current cochain complex is over ℝ (SVD); odd-cycle 2-coloring
+  is a **Z/2 / signed** obstruction, so add a signed (frustration) coboundary. Tier: tool/
+  geometric decomposition-conflict (not foundry-measured EPE — that stays gated).
+  Gate the verdict with the oracle corroboration+specificity pattern + the trust gate.
 - **Step C — wire the verdict through the trust gate + COG/honesty** (proposal→verification),
   same discipline as the rest of the product.
 
