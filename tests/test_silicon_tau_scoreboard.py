@@ -8,7 +8,7 @@ import os
 import pytest
 
 from domains.silicon.tau_scoreboard import (
-    parse_spef_rc, elmore_rc, tau_scoreboard,
+    parse_spef_rc, elmore_rc, tau_scoreboard, tau_scoreboard_measured,
 )
 
 _DETAILED_SPEF = """\
@@ -86,4 +86,25 @@ def test_tau_scoreboard_runs_on_real_45gcd():
     assert rep.target == "interconnect_rc_delay"
     assert rep.source_kind == "measured_proxy"
     # The shuffle control must collapse -- proves any signal found is real, not an artifact.
+    assert abs(rep.control_rho) < 0.20
+
+
+@pytest.mark.skipif(
+    not os.path.exists(f"{_REAL_BASE}/45_gcd.netdelay.report_checks.txt"),
+    reason="net-delay report absent (run sta_flows/tau_netdelay_sta.tcl via Docker)")
+def test_tau_scoreboard_measured_on_real_45gcd():
+    """measured tier: structure vs the tool's OWN per-net interconnect delay."""
+    rep = tau_scoreboard_measured(
+        f"{_REAL_BASE}/45_gcd.def", f"{_REAL_BASE}/45_gcd.spef",
+        f"{_REAL_BASE}/Nangate45.lef",
+        f"{_REAL_BASE}/45_gcd.netdelay.report_checks.txt", design="45_gcd",
+        sta_source_kind="tool",
+        sta_context_paths={"netlist": f"{_REAL_BASE}/45_gcd.def",
+                           "liberty": f"{_REAL_BASE}/nangate45_typ.lib.gz",
+                           "constraints": f"{_REAL_BASE}/45_gcd.sdc"})
+    assert rep.target == "interconnect_net_delay"
+    assert rep.evidence_eligible           # tool-attested with hashed netlist/liberty/sdc
+    assert rep.source_kind == "tool"
+    assert rep.passed                      # clean PASS at full net coverage
+    assert rep.best[1] > 0.4               # structure predicts measured wire delay
     assert abs(rep.control_rho) < 0.20

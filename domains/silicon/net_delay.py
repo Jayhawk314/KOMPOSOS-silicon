@@ -17,10 +17,14 @@ delay). The `measured` tier and provenance/hash come from `sta.load_sta` (the re
 attested `tool` with hashed netlist/liberty/constraints context, exactly like the rest of
 the STA path).
 
-Contract note: the row regex matches the standard columnar form
-`<incr_delay> <cumulative> ^|v inst/pin (cell)`. The synthetic fixture in
-`tests/test_silicon_net_delay.py` pins this format; if a future tool version renders
-input-pin rows differently, adjust `_ROW` and the fixture together.
+Format (verified against real OpenROAD 26Q2 output, `-fields {input_pins net capacitance
+slew fanout} -digits 5`): rows carry a VARIABLE number of leading columns --
+`Fanout Cap Slew Delay Time` for driver output pins, `Slew Delay Time` for load input pins.
+The incremental Delay is therefore the SECOND-to-last number and the cumulative Time is the
+LAST, regardless of how many fields are enabled. Net-name rows (`<net> (net)`) and clock
+rows carry no edge char (`^`/`v`) and are skipped. The synthetic fixture in
+`tests/test_silicon_net_delay.py` mirrors this real layout; adjust `_ROW` and the fixture
+together if a tool version changes it.
 """
 
 from __future__ import annotations
@@ -28,21 +32,25 @@ from __future__ import annotations
 import re
 from typing import Dict, List, Tuple
 
-_NUMBER = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
-
-# A path-table data row: incremental delay, cumulative time, edge, inst/pin, (cell).
+# A data row: >=2 leading numbers (... Delay Time), an edge char, then inst/pin (cell).
 _ROW = re.compile(
-    rf"^\s*({_NUMBER})\s+{_NUMBER}\s+[\^v]\s+([\w$\\./\[\]]+)/([\w$\\.\[\]]+)\s+\(",
+    r"^\s*((?:[-+]?\d*\.?\d+\s+){2,})[\^v]\s+([\w$\\./\[\]]+)/([\w$\\.\[\]]+)\s+\(",
     re.MULTILINE)
 
 
 def parse_pin_delays(text: str) -> List[Tuple[str, str, float]]:
-    """Every path-table row as (instance, pin, incremental_delay)."""
+    """Every path-table row as (instance, pin, incremental_delay).
+
+    Incremental Delay is the second-to-last column; Time is the last. This is stable
+    whether the row is a driver output (Fanout Cap Slew Delay Time) or a load input
+    (Slew Delay Time).
+    """
     out: List[Tuple[str, str, float]] = []
     for m in _ROW.finditer(text):
+        nums = m.group(1).split()
         try:
-            out.append((m.group(2), m.group(3), float(m.group(1))))
-        except ValueError:
+            out.append((m.group(2), m.group(3), float(nums[-2])))
+        except (ValueError, IndexError):
             continue
     return out
 

@@ -15,35 +15,39 @@ from domains.silicon.net_delay import (
 )
 
 
-# A report_checks path with `-fields {input_pins}`: load INPUT-pin rows are present, and
-# their incremental Delay (first column) is the net (wire) delay. Driver OUTPUT-pin rows
-# (r1/Q, u1/Z) carry cell-arc delay and must NOT be attributed to a net's wire delay.
+# Real OpenROAD `-fields {input_pins net capacitance slew fanout} -digits 5` layout:
+# driver OUTPUT rows have 5 leading cols (Fanout Cap Slew Delay Time); load INPUT rows have
+# 3 (Slew Delay Time). Delay is the SECOND-to-last number either way. The load-input row's
+# Delay is the WIRE delay; driver output rows (r1/Q, u1/Z) carry cell arcs and must NOT be
+# attributed. Net-name rows (`net_a (net)`) carry no edge char and are skipped.
 _REPORT = """\
 Startpoint: r1 (rising edge-triggered flip-flop clocked by clk)
 Endpoint: r2 (rising edge-triggered flip-flop clocked by clk)
 Path Type: max
 
-    Delay      Time   Description
--------------------------------------------------------------
-   0.0000    0.0000   clock clk (rise edge)
-   0.0000    0.0000 ^ r1/CK (DFF_X1)
-   0.0900    0.0900 ^ r1/Q (DFF_X1)
-   0.0120    0.1020 ^ u1/A (BUF_X1)
-   0.0300    0.1320 ^ u1/Z (BUF_X1)
-   0.0250    0.1570 ^ u2/A (INV_X1)
-   0.0000    0.1570 ^ r2/D (DFF_X1)
-             0.1570   data arrival time
-            -0.0100   slack (VIOLATED)
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                  0.00000    0.00000    0.00000   clock clk (rise edge)
+                  0.00000    0.00000    0.00000 ^ r1/CK (DFF_X1)
+     1    1.77    0.01000    0.09000    0.09000 ^ r1/Q (DFF_X1)
+                                         net_a (net)
+                  0.01000    0.01200    0.10200 ^ u1/A (BUF_X1)
+     2    4.82    0.02000    0.03000    0.13200 ^ u1/Z (BUF_X1)
+                                         net_b (net)
+                  0.02000    0.02500    0.15700 ^ u2/A (INV_X1)
+             0.15700   data arrival time
+            -0.01000   slack (VIOLATED)
 
 Startpoint: r1 (rising edge-triggered flip-flop clocked by clk)
 Endpoint: r3 (rising edge-triggered flip-flop clocked by clk)
 Path Type: max
 
-    Delay      Time   Description
--------------------------------------------------------------
-   0.0900    0.0900 ^ r1/Q (DFF_X1)
-   0.0150    0.1050 ^ u1/A (BUF_X1)
-             0.1050   data arrival time
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+     1    1.77    0.01000    0.09000    0.09000 ^ r1/Q (DFF_X1)
+                                         net_a (net)
+                  0.01000    0.01500    0.10500 ^ u1/A (BUF_X1)
+             0.10500   data arrival time
 """
 
 
@@ -72,10 +76,10 @@ class _Bridge:
 
 def test_parse_pin_delays_captures_incremental_delay():
     rows = parse_pin_delays(_REPORT)
-    # every transition row with inst/pin is captured (clock pin included; mapping filters it)
-    assert ("u1", "A", 0.0120) in rows
+    # Delay = second-to-last column, robust to 3-col (input) vs 5-col (output) rows.
+    assert ("u1", "A", 0.0120) in rows        # load input row, 3 cols -> wire delay
     assert ("u2", "A", 0.0250) in rows
-    assert ("r1", "Q", 0.0900) in rows
+    assert ("r1", "Q", 0.0900) in rows        # driver output row, 5 cols -> cell delay
 
 
 def test_load_pin_map_excludes_drivers_and_nonsignal():

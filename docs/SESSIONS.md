@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-06-20 (later) — Track 1 CLOSED at measured tier + Docker confirmed working ✅
+
+Picked up Track 2; user rightly questioned the "can't run Docker" assumption. **Checked:
+Docker works** (server 29.5.3, `docker ps` clean; `openroad/orfs` + `openroad/opensta`
+images cached locally). The old "blocked" note was stale. So ran the staged Track 1 measured
+upgrade for real:
+- First run exposed a real format mismatch: `report_checks -fields {...}` rows have VARIABLE
+  leading columns (`Fanout Cap Slew Delay Time`), Delay is the **second-to-last** number, and
+  default `-digits 2` floors 45nm wire delays to 0.00. My staged parser (assumed
+  `<delay> <time>`) would have mis-parsed — exactly why running it mattered. Fixed `_ROW` to
+  take the second-to-last number, added `-digits 5`, realigned the test fixture to the real
+  layout. (`tests/test_silicon_net_delay.py` now mirrors actual OpenROAD output.)
+- A `-path_delay max` run covered only 37 nets and the single-seed shuffle control didn't
+  collapse (+0.30) — a small-sample artifact. `min_max` + more paths/endpoint → **full
+  274-net coverage**.
+- **MEASURED RESULT — PASS on real 45_gcd:** structure vs the tool's OWN per-net interconnect
+  delay: fanout **+0.645** (prec@10 0.80), wirelength +0.516, degree +0.429, curvature
+  +0.350; shuffle control **−0.053**; `status: measured` (netlist/liberty/sdc hashed; report
+  sha256 `c5ec4cc1…3038ea`). Consistent with the Elmore proxy (+0.61), slightly stronger.
+- **Track 1 is complete across both tiers.** The τ thesis holds at the authoritative
+  measured tier: interconnect delay is structurally predictable; gate slack is not.
+  `tests/test_silicon_tau_scoreboard.py` +1 measured real-data test (9 tau+net_delay green).
+
 ## 2026-06-20 (later) — resumed Codex's orphaned work + NEW τ WIN: interconnect delay IS structural ✅
 
 Resumed after a Codex session ran out of tokens mid-cleanup (`codexsesh.txt`). Two things:

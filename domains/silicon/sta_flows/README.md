@@ -141,13 +141,27 @@ d2be5422…b0b83  45_gcd.report_checks.txt   (OpenROAD STA, 48 violations)
 caa4e9b4…d43a7   Nangate45.lef              (tech+cell LEF)
 ```
 
-### tau net-delay (measured) — STAGED, pending one Docker run
+### tau net-delay (measured) — DONE ✅ (2026-06-20)
 
-The tau scoreboard (`tau_scoreboard.py`) currently scores structure against an *extracted*
-Elmore R·C proxy (`measured_proxy`) and **PASSES on real 45_gcd** (fanout ρ **+0.610**,
-shuffle −0.018, 274 nets). The `measured`-tier upgrade scores structure against the tool's
-*own* per-net interconnect (wire) delay. To produce it, re-run STA with input-pin rows so
-wire-delay rows are emitted:
+The tau scoreboard (`tau_scoreboard.py`) scores structure against an *extracted* Elmore R·C
+proxy (`measured_proxy`): **PASS on real 45_gcd**, fanout ρ **+0.610**, shuffle −0.018, 274
+nets. The `measured`-tier upgrade scores structure against the tool's *own* per-net
+interconnect (wire) delay, and also **PASSES**:
+
+| Predictor | Spearman ρ (vs measured net delay) |
+|---|---:|
+| **fanout** | **+0.645** (prec@10 0.80) |
+| wirelength | +0.516 |
+| degree | +0.429 |
+| neg_curvature | +0.350 |
+| sink_area | +0.218 |
+| driver_area | −0.162 |
+
+n=274 nets, shuffle control **−0.053**, `status: measured` (netlist=`45_gcd.def`, liberty,
+sdc hashed). Report sha256 `c5ec4cc1…3038ea` (113,981 lines, 21,271 net rows; gitignored,
+regenerable). **Honest note:** an initial `-path_delay max` run covered only 37 nets and the
+single-seed shuffle control didn't collapse (+0.30) — a small-sample artifact; `min_max`
+with more paths per endpoint gave full 274-net coverage and a clean control. Reproduce:
 
 ```bash
 OUT="$PWD/domains/silicon/data/sta_45gcd"          # detailed-SPEF inputs already staged here

@@ -19,12 +19,17 @@ read_sdc   /work/45_gcd.sdc
 
 # Report a large number of max-delay paths regardless of slack, with input pins + net
 # fields so wire-delay rows are emitted. Tune the counts up if net coverage is low.
+# -digits 5: default 2-digit rounding floors 45nm wire delays to 0.00 -- need precision.
+# input_pins makes load-pin rows (whose Delay column IS the wire delay) appear.
+# min_max + many paths per endpoint widens net coverage (more nets appear as load rows).
 report_checks \
-    -path_delay max \
+    -path_delay min_max \
     -fields {input_pins net capacitance slew fanout} \
-    -group_count 2000 \
-    -endpoint_count 2000 \
+    -digits 5 \
+    -group_path_count 5000 \
+    -endpoint_path_count 20 \
     -slack_max 1e30 \
+    -slack_min -1e30 \
     > /work/45_gcd.netdelay.report_checks.txt
 
 puts "wrote /work/45_gcd.netdelay.report_checks.txt"
