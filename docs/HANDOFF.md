@@ -37,7 +37,7 @@ patterning coherence) — aimed at the Huawei-τ / TSMC-multipatterning / Intel-
 | **Track 1 — interconnect (τ) delay** | proxy fanout **+0.61**; **measured** net-delay **+0.645** (tau_scoreboard) |
 | **Track 2 — 3D thermal cross-die coupling** | **8/8** Open3DBench designs; directional (sink-far die) (thermal3d_scoreboard) |
 | **Track 3A — multi-view net coherence** | real orfs_gcd verilog/def/spef → **H0=1, H1=0**; obstruction-localization proven (fidelity_coherence) |
-| **Track 3B — double-patterning native conflicts** | real GDS layer-13 shapes → **not 2-colorable, native conflicts localized**, BFS↔spectral agree (dp_conflict + gds) |
+| **Track 3B — double-patterning native conflicts** | real GDS shapes, SREF-flattened → real dense **M1 not 2-colorable, 7303 native conflicts localized**, BFS↔spectral agree (dp_conflict + gds) |
 
 **Honest boundaries (don't over-claim):** cheap structure does NOT predict gate-level timing
 slack (optimizer flattens it — that's STA's job); the IR/EM win is **mature-node only** (fails
@@ -54,10 +54,13 @@ cohomological (only double-patterning is a clean Z/2 H¹ fit).
   - Step A DONE: H⁰/H¹ coherence engine wired to real silicon (verilog/def/spef).
   - Step B first cut DONE: double-patterning native-conflict localization on **real GDS metal
     shapes** (Z/2 obstruction, two methods agreeing).
-  - **Open:** resolve SREF cell-internal metal (currently top-cell routing only); **OpenMPL**
-    ground-truth cross-check (build it, run ISCAS/ISPD'19, confirm our localized native
-    conflicts match its decomposer); then wire the verdict through the trust gate +
-    corroboration/specificity (oracle cluster). Foundry-measured EPE stays gated.
+  - Step B SREF-flatten DONE: GDS reader resolves the SREF/AREF hierarchy, so cell-internal
+    metal is included — real dense **M1: 7303 native conflicts localized**. Also fixed a latent
+    honesty bug (spectral silently skipped huge components → false 0); now scalable + honest.
+  - **Open:** **OpenMPL** ground-truth cross-check (build it, run ISCAS/ISPD'19, confirm our
+    localized native conflicts match its decomposer — needs a C++/Boost/Limbo build, Docker
+    only here); then wire the verdict through the trust gate + corroboration/specificity
+    (oracle cluster). Foundry-measured EPE stays gated.
 
 ## 5. How to run the key things
 

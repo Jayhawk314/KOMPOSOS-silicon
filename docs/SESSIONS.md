@@ -5,6 +5,36 @@
 
 ---
 
+## 2026-06-21 (later) — Track 3 Step B: SREF-flatten real cell-internal metal + scalable spectral check ✅
+
+Retired the documented honest boundary "top-cell routing only" on the GDS double-patterning
+analysis, and fixed a latent honesty bug it exposed.
+- **SREF/AREF flattening (`gds.py`):** `parse_gds_structures` now reads every structure's own
+  shapes AND its SREF/AREF placements; `flatten_gds_shapes` resolves the hierarchy into the
+  top frame with the full GDS transform (reflect→mag→rotate→translate, recursive). Added the
+  GDS 8-byte real decoder (`_gds_real`) and `_xform_bbox`. `gds_features(..., flatten=True)`
+  and `analyze_gds(..., flatten=True)` expose it. Verified geometrically: the orfs_gcd top
+  cell `gcd` has **4514 SREF instances**; flattened metal spans exactly 0–367250 db units =
+  0–36.725 µm, corner-to-corner with the DEF DIEAREA. Units are 10000/µm (700 db = 70 nm).
+- **Real result — cell-internal metal is the dense layer.** M1 (layer 11) goes 25 → 6076
+  shapes once flattened; at 70 nm spacing it is NOT 2-colorable: **7303 native conflicts
+  localized**, spectral λ_min(D+A)=0.62. Layer 13 goes 1890 → 5076 (600 conflicts); layer 10
+  flattens to 9483 shapes and is bipartite (0). M1 being the canonical double-patterning layer
+  and only now visible is exactly the point.
+- **Bug found + fixed (honesty):** the dense data exposed that `spectral_frustration` silently
+  SKIPPED components >2500 nodes and returned a false 0 ("bipartite"), disagreeing with the
+  exact BFS on flattened M1. Replaced with: exact dense `eigvalsh` for components ≤2000, and a
+  numpy-only **shifted sparse power iteration** (`_lambda_min_signless_sparse`) for larger ones
+  — no component is ever skipped. Honest limit documented: the sparse estimate confirms
+  bipartite-vs-frustrated by ORDER OF MAGNITUDE (convergence floor ~1e-5..1e-3; cannot certify
+  a lone huge near-1D cycle). The EXACT verdict + localization always come from BFS Z/2.
+- `tests/test_silicon_dp_conflict.py` now 14 (was 6): GDS-real round-trip, bbox rotate/reflect,
+  SREF placement + transform + nested recursion, sparse-spectral scales to large dense
+  components (bipartite <1e-2, heavily-frustrated >0.1, agrees with BFS), real flattened M1
+  denser + native-conflict localization. All green; existing top-cell receipt unchanged.
+- **Still open:** OpenMPL conflict-graph ground-truth cross-check (needs a C++/Boost/Limbo
+  build — no native toolchain here, only Docker). Then wire the verdict through the trust gate.
+
 ## 2026-06-21 — Track 3 Step B first cut: double-patterning native-conflict localization (Z/2 H1) ✅
 
 Scouted MPLD data (OpenMPL, ISCAS/ISPD'19) and found the honest math fit: double patterning

@@ -188,8 +188,19 @@ independent views of the same target → mask disagreement = a real H¹ obstruct
     graph now from actual routing shapes (top-cell `gcd`, layer 13 = 1890 shapes), bbox-gap
     proximity. At min-width spacing (700 db units) the layer is **not 2-colorable: 87 native
     conflicts localized**, rising to 1130 at 2800 — realistic (dense real routing needs
-    multi-patterning), with BFS↔spectral still agreeing. Honest remaining: top-cell routing
-    only (SREF cell-internal metal not resolved); OpenMPL cross-check still open.
+    multi-patterning), with BFS↔spectral still agreeing.
+  - **SREF cell-internal metal DONE ✅ (`flatten_gds_shapes` + `analyze_gds(flatten=True)`).**
+    The "top-cell routing only" boundary is retired: the GDSII reader now resolves the SREF/AREF
+    hierarchy (4514 instances in `gcd`), placing standard-cell internal metal into the top frame
+    with the full GDS transform (reflect→mag→rotate→translate, recursive; verified spanning the
+    DEF die area exactly). The real dense layer appears: **M1 (layer 11) 25 → 6076 shapes, NOT
+    2-colorable, 7303 native conflicts localized, λ_min(D+A)=0.62** — M1 being the canonical
+    double-patterning layer is exactly the point. This exposed + fixed a latent honesty bug:
+    `spectral_frustration` silently skipped components >2500 nodes (false 0); now exact dense
+    `eigvalsh` ≤2000 + numpy-only sparse power iteration above, so no component is skipped.
+    Honest limit: the sparse estimate confirms by magnitude (convergence floor); BFS Z/2 stays
+    the exact verdict. 14 dp_conflict tests. **Open: OpenMPL conflict-graph cross-check** (needs
+    a C++/Boost/Limbo build — no native toolchain here, Docker only).
 - **Step C — wire the verdict through the trust gate + COG/honesty** (proposal→verification),
   same discipline as the rest of the product.
 

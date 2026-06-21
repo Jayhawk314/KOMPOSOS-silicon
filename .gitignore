@@ -55,6 +55,7 @@ reports/figures/*.png
 predictions/
 results/
 sessions/
+codexsesh.txt
 
 # ── Secrets ──────────────────────────────────────────────────────────────
 .env

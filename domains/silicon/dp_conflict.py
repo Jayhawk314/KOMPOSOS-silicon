@@ -138,14 +138,72 @@ def two_color_conflicts(names: List[str], adj: Dict[str, set]
     return (len(frustrated) == 0), color, frustrated
 
 
+def _lambda_min_signless_dense(comp: List[str], adj: Dict[str, set]) -> float:
+    """Exact smallest eigenvalue of the signless Laplacian Q=D+A (dense, small components)."""
+    ci = {n: i for i, n in enumerate(comp)}
+    mat = np.zeros((len(comp), len(comp)))
+    for u in comp:
+        mat[ci[u], ci[u]] = len(adj[u])
+        for v in adj[u]:
+            if v in ci:
+                mat[ci[u], ci[v]] = 1.0
+    return float(np.linalg.eigvalsh(mat)[0])
+
+
+def _lambda_min_signless_sparse(comp: List[str], adj: Dict[str, set],
+                                iters: int = 400, tol: float = 1e-11) -> float:
+    """lambda_min(Q) for a large component via shifted power iteration (numpy-only, sparse).
+
+    Q=D+A is PSD; with s >= lambda_max(Q) the matrix M = sI - Q is PSD and its DOMINANT
+    eigenvalue is s - lambda_min(Q). Power iteration on M (sparse matvec) converges to it, so
+    no component is ever silently skipped (the old code's bug: skip => false 0 => false
+    'bipartite'). HONEST LIMIT: this is a magnitude confirmation, not an exact oracle. Power
+    iteration has a convergence floor (~1e-5..1e-3) set by the spectral gap, so on a large
+    component it distinguishes bipartite (lambda_min ~ 0) from frustrated (lambda_min clearly
+    positive) by ORDER OF MAGNITUDE, but cannot certify a lone huge near-1D cycle (where
+    lambda_min ~ (pi/n)^2 sinks into the floor). The EXACT 2-colorability verdict and the
+    native-conflict localization always come from the combinatorial BFS; this only
+    cross-confirms it on the dense components that real routing actually produces."""
+    ci = {n: i for i, n in enumerate(comp)}
+    n = len(comp)
+    deg = np.array([len(adj[u]) for u in comp], dtype=float)
+    rows: List[int] = []
+    cols: List[int] = []
+    for u in comp:
+        iu = ci[u]
+        for v in adj[u]:
+            if v in ci:
+                rows.append(iu)
+                cols.append(ci[v])
+    r = np.asarray(rows, dtype=np.intp)
+    c = np.asarray(cols, dtype=np.intp)
+    s = 2.0 * float(deg.max()) + 1.0                      # upper bound on lambda_max(Q)
+    x = np.random.default_rng(0).standard_normal(n)
+    x /= np.linalg.norm(x)
+    lam = 0.0
+    for _ in range(iters):
+        ax = np.bincount(r, weights=x[c], minlength=n) if r.size else np.zeros(n)
+        y = s * x - (deg * x + ax)                        # M x = sx - Qx
+        nrm = float(np.linalg.norm(y))
+        if nrm == 0.0:
+            return s                                      # x was a null vector of M
+        x = y / nrm
+        if abs(nrm - lam) < tol * max(1.0, nrm):
+            lam = nrm
+            break
+        lam = nrm
+    return max(0.0, s - lam)                              # lambda_min(Q)
+
+
 def spectral_frustration(names: List[str], adj: Dict[str, set],
-                         max_comp: int = 2500) -> float:
+                         dense_max: int = 2000) -> float:
     """Spectral cross-check: MAX over components of lambda_min(D + A).
 
     For a connected graph lambda_min(D+A)=0 iff bipartite, else >0. The signless Laplacian
     of the WHOLE graph is misleading (isolated/bipartite components always give 0), so we
     take the worst component: max-of-mins == 0 iff every component is bipartite iff the
-    layer is 2-colorable -- agreeing with the combinatorial BFS test.
+    layer is 2-colorable -- agreeing with the combinatorial BFS test. Small components use an
+    exact dense eigensolve; large ones use sparse power iteration (no component is skipped).
     """
     seen: set = set()
     worst = 0.0
@@ -159,16 +217,11 @@ def spectral_frustration(names: List[str], adj: Dict[str, set],
             for v in adj[u]:
                 if v not in seen:
                     seen.add(v); q.append(v)
-        if len(comp) < 3 or len(comp) > max_comp:
-            continue                              # <3 nodes always bipartite; skip huge comps
-        ci = {n: i for i, n in enumerate(comp)}
-        mat = np.zeros((len(comp), len(comp)))
-        for u in comp:
-            mat[ci[u], ci[u]] = len(adj[u])
-            for v in adj[u]:
-                if v in ci:
-                    mat[ci[u], ci[v]] = 1.0
-        worst = max(worst, float(np.linalg.eigvalsh(mat)[0]))
+        if len(comp) < 3:
+            continue                                      # <3 nodes always bipartite
+        lam = (_lambda_min_signless_dense(comp, adj) if len(comp) <= dense_max
+               else _lambda_min_signless_sparse(comp, adj))
+        worst = max(worst, lam)
     return worst
 
 
@@ -221,11 +274,17 @@ def analyze(def_path: str, distance: float, design: str = "design") -> DPReport:
 
 
 def analyze_gds(gds_path: str, layer: int, distance: float,
-                design: str = "design", cell: str | None = None) -> DPReport:
-    """REAL metal shapes: conflict graph from GDS top-cell shapes on `layer` (bbox gap)."""
+                design: str = "design", cell: str | None = None,
+                flatten: bool = False) -> DPReport:
+    """REAL metal shapes: conflict graph from GDS shapes on `layer` (bbox gap).
+
+    flatten=False: top-cell routing only. flatten=True: include the full SREF/AREF
+    hierarchy (standard-cell internal metal) -- the real dense layer."""
     from .gds import gds_features
-    names, adj = build_conflict_graph_bbox(gds_features(gds_path, layer, cell), distance)
-    return _report(names, adj, distance, f"{design} L{layer}")
+    feats = gds_features(gds_path, layer, cell, flatten=flatten)
+    names, adj = build_conflict_graph_bbox(feats, distance)
+    tag = f"{design} L{layer}" + (" [flat]" if flatten else "")
+    return _report(names, adj, distance, tag)
 
 
 def main() -> None:
@@ -239,9 +298,16 @@ def main() -> None:
         print(f"[skip] {gds} absent")
         return
     # REAL metal shapes on the densest routing layer (13), distance sweep in GDS db units.
-    print("--- REAL GDS metal shapes (top cell 'gcd', layer 13) ---")
+    print("--- REAL GDS metal shapes (top cell 'gcd', layer 13, TOP-CELL ROUTING ONLY) ---")
     for dist in (700.0, 1400.0, 2800.0):
         print(analyze_gds(gds, 13, dist, design="orfs_gcd").render()); print()
+
+    # FLATTENED: resolve the SREF hierarchy so standard-cell INTERNAL metal is included --
+    # the real dense layer a foundry actually decomposes. M1 (layer 11) is the canonical
+    # double-patterning layer and is nearly empty at top-cell, dense once flattened.
+    print("--- REAL GDS metal shapes (SREF-FLATTENED: + standard-cell internal metal) ---")
+    for layer in (11, 13):
+        print(analyze_gds(gds, layer, 700.0, design="orfs_gcd", flatten=True).render()); print()
 
 
 if __name__ == "__main__":
