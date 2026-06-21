@@ -79,6 +79,41 @@ def build_conflict_graph(feats: List[Feature], distance: float
     return names, adj
 
 
+def _bbox_gap(a, b) -> float:
+    """Euclidean gap between two bounding boxes (0 if they touch/overlap)."""
+    dx = max(0.0, a[0] - b[2], b[0] - a[2])
+    dy = max(0.0, a[1] - b[3], b[1] - a[3])
+    return (dx * dx + dy * dy) ** 0.5
+
+
+def build_conflict_graph_bbox(feats, distance: float) -> Tuple[List[str], Dict[str, set]]:
+    """Conflict edge between real shapes whose bounding-box GAP < distance (grid-indexed).
+
+    feats: [(id, cx, cy, bbox)]. Correct for spacing (edge-to-edge), and handles long wires
+    by indexing each shape into every grid cell its distance-inflated bbox covers.
+    """
+    cell = max(distance, 1.0)
+    grid: Dict[Tuple[int, int], List[int]] = defaultdict(list)
+    for idx, (_, _, _, bb) in enumerate(feats):
+        for gx in range(int((bb[0] - distance) // cell), int((bb[2] + distance) // cell) + 1):
+            for gy in range(int((bb[1] - distance) // cell), int((bb[3] + distance) // cell) + 1):
+                grid[(gx, gy)].append(idx)
+    adj: Dict[str, set] = {f[0]: set() for f in feats}
+    checked: set = set()
+    for idxs in grid.values():
+        for a in range(len(idxs)):
+            for b in range(a + 1, len(idxs)):
+                i, j = idxs[a], idxs[b]
+                key = (i, j) if i < j else (j, i)
+                if key in checked:
+                    continue
+                checked.add(key)
+                if _bbox_gap(feats[i][3], feats[j][3]) <= distance:
+                    adj[feats[i][0]].add(feats[j][0])
+                    adj[feats[j][0]].add(feats[i][0])
+    return [f[0] for f in feats], adj
+
+
 def two_color_conflicts(names: List[str], adj: Dict[str, set]
                         ) -> Tuple[bool, Dict[str, int], List[Tuple[str, str]]]:
     """BFS 2-coloring (the combinatorial Z/2 computation). Frustrated edges = native conflicts."""
@@ -168,9 +203,7 @@ class DPReport:
         return "\n".join(lines)
 
 
-def analyze(def_path: str, distance: float, design: str = "design") -> DPReport:
-    feats = parse_def_placements(def_path)
-    names, adj = build_conflict_graph(feats, distance)
+def _report(names, adj, distance, design) -> DPReport:
     n_edges = sum(len(v) for v in adj.values()) // 2
     colorable, _, frustrated = two_color_conflicts(names, adj)
     frust = spectral_frustration(names, adj)
@@ -181,19 +214,34 @@ def analyze(def_path: str, distance: float, design: str = "design") -> DPReport:
         native_examples=frustrated[:5])
 
 
+def analyze(def_path: str, distance: float, design: str = "design") -> DPReport:
+    """Placement-proximity conflict graph (a stand-in; see analyze_gds for real shapes)."""
+    names, adj = build_conflict_graph(parse_def_placements(def_path), distance)
+    return _report(names, adj, distance, design)
+
+
+def analyze_gds(gds_path: str, layer: int, distance: float,
+                design: str = "design", cell: str | None = None) -> DPReport:
+    """REAL metal shapes: conflict graph from GDS top-cell shapes on `layer` (bbox gap)."""
+    from .gds import gds_features
+    names, adj = build_conflict_graph_bbox(gds_features(gds_path, layer, cell), distance)
+    return _report(names, adj, distance, f"{design} L{layer}")
+
+
 def main() -> None:
     print("KOMPOSOS-V | silicon double-patterning native-conflict localization (Track 3 Step B)")
     print("=" * 74)
     print("Q: is this layer 2-mask decomposable, and WHERE are the native (odd-cycle) conflicts?")
     print("   (2-colorable <=> no odd cycles <=> Z/2 H1 = 0; engine localizes the obstruction)\n")
     base = "domains/silicon/data/orfs_gcd/results/base"
-    dp = f"{base}/6_final.def"
-    if not os.path.exists(dp):
-        print(f"[skip] {dp} absent")
+    gds = f"{base}/6_final.gds"
+    if not os.path.exists(gds):
+        print(f"[skip] {gds} absent")
         return
-    # sweep a few coloring distances to show the colorable -> native-conflict transition.
-    for dist in (1500.0, 2500.0, 4000.0):
-        print(analyze(dp, dist, design="orfs_gcd").render()); print()
+    # REAL metal shapes on the densest routing layer (13), distance sweep in GDS db units.
+    print("--- REAL GDS metal shapes (top cell 'gcd', layer 13) ---")
+    for dist in (700.0, 1400.0, 2800.0):
+        print(analyze_gds(gds, 13, dist, design="orfs_gcd").render()); print()
 
 
 if __name__ == "__main__":

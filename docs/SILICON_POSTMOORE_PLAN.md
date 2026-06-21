@@ -184,6 +184,12 @@ independent views of the same target → mask disagreement = a real H¹ obstruct
     feature pairs**. `tests/test_silicon_dp_conflict.py` (4). The engine now localizes native
     double-patterning conflicts on a real layer. *Upgrades:* real GDS metal shapes (vs
     placement proxy) + OpenMPL conflict-graph ground-truth cross-check.
+  - **Real GDS metal shapes DONE ✅ (`gds.py` stdlib GDSII reader + `analyze_gds`).** Conflict
+    graph now from actual routing shapes (top-cell `gcd`, layer 13 = 1890 shapes), bbox-gap
+    proximity. At min-width spacing (700 db units) the layer is **not 2-colorable: 87 native
+    conflicts localized**, rising to 1130 at 2800 — realistic (dense real routing needs
+    multi-patterning), with BFS↔spectral still agreeing. Honest remaining: top-cell routing
+    only (SREF cell-internal metal not resolved); OpenMPL cross-check still open.
 - **Step C — wire the verdict through the trust gate + COG/honesty** (proposal→verification),
   same discipline as the rest of the product.
 
