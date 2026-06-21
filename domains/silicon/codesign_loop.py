@@ -155,7 +155,6 @@ def codesign(def_path: str, spef_path: str, lef_path: str,
     """Run find->fix->prove on a real layout's worst current-demand nets."""
     from .netlist_bridge import NetlistBridge
     bridge = NetlistBridge(def_path, spef_path, lef_path=lef_path)
-    bridge.load()
 
     demand = []
     for net in bridge.nets:

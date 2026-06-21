@@ -4,23 +4,20 @@
 """
 KOMPOSOS-V silicon co-design domain.
 
-A semiconductor co-design vertical on the shared `Category` substrate. It takes a
-chip's *materials* (from the CHEM semiconductor bridge) and its *layout/netlist*
-(via the new netlist bridge) and runs categorical + sheaf + flow-geometry analysis,
-emitting an honest, receipt-backed waste ledger and action portfolio.
+The active product is a mature-node reliability co-design layer: find physical-stress
+hotspots from real layout data, ground material/geometry fixes in cited facts, and keep
+only actions whose tradeoff is proven with a receipt.
 
-Mostly an integration of existing engines:
-  - materials + 5 scorers  <- KOMPOSOS-IV-CHEM/semiconductor_bridge
-  - coherence pattern, Ricci/Fiedler flow geometry, waste ledger, agent CLI
-                            <- KOMPOSOS-GRID/domains/grid
-  - the one new piece: netlist_bridge (layout/netlist -> Category)
+Evidence boundaries:
+  - `structural_only`: graph/placement signals and counterfactuals.
+  - `measured_proxy`: extracted SPEF parasitics and derived current-demand proxies.
+  - `validated_hypothesis`: cited material physics plus real layout geometry.
+  - `measured`: attested EDA tool output with hashed design context.
 
-Invariant: scores/curvature only PROPOSE; the verdict is COG != REJECT + HonestyGate.
-Structural results are `structural_only`; SPEF is `measured_proxy`. STA is `measured`
-only with an attested report and hashed netlist/Liberty/SDC context. No silicon physics
-is simulated here.
+Most root math engines are substrate, not product dependencies. See
+`docs/SILICON_PRODUCT_BOUNDARY.md` before wiring dormant machinery into reliability.
 
-Master plan: docs/SILICON_PLAN.md   Status: docs/SILICON_STATUS.md
-Work log: docs/SESSIONS.md
-Status: Rungs 0-4 and 6-8 built; Rung 5 real STA evidence remains pending.
+Start here: docs/HANDOFF.md
+Findings: docs/SILICON_FINDINGS.md
+Status/log: docs/SILICON_STATUS.md, docs/SESSIONS.md
 """

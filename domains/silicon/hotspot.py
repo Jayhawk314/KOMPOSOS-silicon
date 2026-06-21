@@ -85,7 +85,6 @@ def predict_hotspots(def_path: str, spef_path: str, lef_path: str,
                      nets_per_tile: int = 3) -> HotspotReport:
     """Rank stress tiles from the layout alone. No power simulation."""
     bridge = NetlistBridge(def_path, spef_path, lef_path=lef_path)
-    bridge.load()
     dbu = bridge.dbu or 1.0
 
     # Per net: driver instance + a current-demand proxy (driven cap x fanout).

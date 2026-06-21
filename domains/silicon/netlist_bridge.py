@@ -41,7 +41,6 @@ from typing import Dict, List, Optional, Tuple
 from core.bridge import Bridge
 from core.category import Category
 from core.types import Object, Morphism
-from .flow_geometry import edge_curvatures, fiedler_seam
 
 _SAMPLE_DIR = os.path.join(os.path.dirname(__file__), "samples")
 SAMPLE_DEF = os.path.join(_SAMPLE_DIR, "tiny_core.def")
@@ -164,8 +163,13 @@ class NetlistBridge(Bridge):
         self.max_fanout = max_fanout
         self.skip_globals = skip_globals
         self.signal_nets = [n for n in self.nets if self._is_signal(n)]
-        from .net_operad import build_net_operad
-        self.net_operad = build_net_operad(self)
+        self.net_operad = None
+
+    def _ensure_net_operad(self):
+        if self.net_operad is None:
+            from .net_operad import build_net_operad
+            self.net_operad = build_net_operad(self)
+        return self.net_operad
 
     # --- LEF helpers (no-ops without a LEF) -------------------------------
     def _macro_of(self, inst: str):
@@ -227,7 +231,8 @@ class NetlistBridge(Bridge):
         from .net_operad import project_operation
 
         mors = []
-        for operation in self.net_operad.operations.values():
+        operad = self._ensure_net_operad()
+        for operation in operad.operations.values():
             net = operation.data["net"]
             cap = operation.data["cap_pf"]
             assumption = operation.data["projection_assumption"]
@@ -267,6 +272,8 @@ class LayoutAnalysis:
 
 
 def analyze_layout(bridge: NetlistBridge) -> LayoutAnalysis:
+    from .flow_geometry import edge_curvatures, fiedler_seam
+
     cat = bridge.category
     net_of = {frozenset((m.source, m.target)): m.metadata.get("net", "?")
               for m in cat.morphisms()}

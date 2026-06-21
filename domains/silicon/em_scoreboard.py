@@ -83,7 +83,6 @@ def em_scoreboard(def_path: str, spef_path: str, lef_path: str, em_path: str,
     import random
     segs = parse_em_current(em_path)
     bridge = NetlistBridge(def_path, spef_path, lef_path=lef_path)
-    bridge.load()
     dbu = bridge.dbu or 1.0
 
     # Structural per-instance current demand (cap x fanout at the driver) + density.

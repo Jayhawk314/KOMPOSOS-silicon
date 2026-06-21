@@ -36,7 +36,7 @@ def _tile_table(def_path: str, spef_path: str, lef_path: str, voltage_path: str,
                 supply_v: float, grid: int = 20) -> Tuple[np.ndarray, np.ndarray]:
     """Per-tile feature matrix X (z-scored) and target y (mean IR drop)."""
     pos, drop = parse_ir_voltage(voltage_path, supply_v)
-    b = NetlistBridge(def_path, spef_path, lef_path=lef_path); b.load()
+    b = NetlistBridge(def_path, spef_path, lef_path=lef_path)
     inst_cap: Dict[str, float] = {}; inst_fan: Dict[str, float] = {}
     inst_dem: Dict[str, float] = {}; active = set()
     for net in b.nets:

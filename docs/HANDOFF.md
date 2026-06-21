@@ -71,9 +71,11 @@ mint a layout with ORFS (`make DESIGN_CONFIG=designs/nangate45/<d>/config.mk`), 
 
 ## 5. Important context for whoever resumes
 
-- **The system is much bigger than the product uses.** The reliability pipeline imports only
-  `core.category` + `core.honesty_gate`. ~50k lines of math (oracle/geometry/zfc/categorical/
-  operadum/PRONOIA/cog/…) are **dormant** relative to it. The proven value is the *discipline*
+- **The system is much bigger than the product uses.** The reliability product imports local
+  silicon modules plus the lightweight core bridge/category/types/honesty gate path; the
+  boundary is guarded by `tests/test_silicon_product_boundary.py`. ~50k lines of math
+  (oracle/geometry/zfc/categorical/operadum/PRONOIA/cog/...) are **dormant** relative to it.
+  The proven value is the *discipline*
   (receipts/grounding) + the *materials↔layout bridge*, NOT the exotic math. Do not bolt the
   dormant engines in for show — only wire one in if it passes a real measured test like
   everything else. That's the project's own honesty rule.

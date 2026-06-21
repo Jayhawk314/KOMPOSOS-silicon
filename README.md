@@ -9,8 +9,9 @@ with a checkable receipt you can trust without trusting the system.
 This is the **integration repo**: the first place all six engines live together,
 over one shared `Category`.
 
-> **Docs:** `docs/SILICON_PLAN.md` (the active project) · `CLAUDE.md` (working rules
-> & invariants) · `MEMORY.md` (decisions & state) · `docs/SESSIONS.md` (work log).
+> **Docs:** `docs/HANDOFF.md` (start here) · `docs/SILICON_FINDINGS.md` (receipts
+> and conclusions) · `docs/SILICON_PRODUCT_BOUNDARY.md` (unused/dormant math audit)
+> · `CLAUDE.md` (working rules) · `docs/SESSIONS.md` (work log).
 
 ## What we're building now: silicon co‑design
 
@@ -27,8 +28,9 @@ already exists in `KOMPOSOS-IV-CHEM` (5 scorers, heterostructure analysis, an in
 in `KOMPOSOS-GRID`. We port both onto this substrate; the one genuinely new piece is a
 `netlist_bridge` that turns real chip layout (DEF/SPEF/netlist) into a `Category`.
 
-**Read `docs/SILICON_PLAN.md` for the data sources, roadmap, and target layout, and
-`docs/SILICON_WHITEPAPER.md` for the methods, findings, and where it can go.**
+**Read `docs/HANDOFF.md` first, then `docs/SILICON_FINDINGS.md` for the measured
+results and `docs/SILICON_PRODUCT_BOUNDARY.md` for which root math folders are dormant
+relative to the product.**
 
 ---
 
@@ -116,7 +118,7 @@ propose candidate edges; the symbolic layer verifies. (See `CLAUDE.md`.)
 pip install numpy            # core loop/oracle/scoreboard are numpy + stdlib
 python -m core.loop          # watch the loop build & verify capabilities
 python -m core.scoreboard    # measure it
-python -m pytest tests/ -q   # 140 tests
+python -m pytest tests/ -q   # current regression suite
 ```
 
 `requirements.txt` also lists `streamlit`, `pandas`, and `esm` — these are only
@@ -134,28 +136,29 @@ needed for the optional UI and the protein/geometry heritage, not the core loop.
 | `cog/` | the 5‑tier verdict engine |
 | `operadum/` | OPERADUM (construct) + PRONOIA (predict, incl. honesty) — own sub‑package |
 | `zfc/` | the logic narrator / dual engine |
-| `topology/` `hott/` `cubical/` `geometry/` `game/` | supporting math |
+| `topology/` `hott/` `cubical/` `geometry/` `game/` | supporting math; mostly dormant relative to the silicon product |
 | `data/` | embeddings backend + persistence helpers |
-| `tests/` | 140 tests — laws and behaviour |
+| `tests/` | regression tests for substrate laws and silicon behavior |
 
 ---
 
 ## Status
 
-Core loop, oracle, embeddings, grounding, honesty gate, and scoreboard are real
-and tested. The substrate's first serious vertical — **silicon co‑design**
-(`domains/silicon/`) — is now built end‑to‑end at the synthetic/sample stage:
+The silicon vertical is now a tested mature-node reliability co-design layer. Timing
+prediction was falsified on optimized layouts; IR-drop and EM/current hotspots pass
+against real OpenROAD output on mature-node designs. The product command is:
 
-- **Rung 0** `synthetic.py` — Ricci congestion + Fiedler seam + coherence on a toy chip
-- **Rung 1** `material_bridge.py` (+ `materials_data.py`, `scoring.py`) — 28 materials,
-  5 scorers, heterostructure analysis, verdicts gated by **COG + HonestyGate**
-- **Rung 2** `netlist_bridge.py` (+ `flow_geometry.py`) — real DEF/SPEF parsers,
-  geometry on actual layout connectivity (committed sample; ready for OpenLane output)
-- **Rung 3** `waste_ledger.py` + `agent_tools.py` — evidence‑tiered waste ledger,
-  action portfolio, and a local‑agent CLI (`whatif --isolate <block>`)
+```powershell
+python -m domains.silicon.agent_tools --def <design>.def --spef <design>.spef --lef <cells.lef> reliability
+```
 
-Full suite **174 passing**. Next: the real OpenLane/SKY130 data download. See
-`docs/SILICON_PLAN.md` (roadmap) and `docs/SESSIONS.md` (work log).
+What is built:
 
-`domains/` also holds the earlier `circuits.py` (NAND→XOR self‑improvement demo) and
-`numeric.py`.
+- real DEF/SPEF/LEF/STA ingestion, hashed STA receipts, and structural scoreboards;
+- mature-node IR-drop validation (+0.4 to +0.6) and measured EM-current validation (+0.64);
+- hotspot detection, cited interconnect/material grounding, and a find -> fix -> prove loop;
+- a reliability report with evidence tiers, plus a trust gate over external/learned proposers;
+- scale support through partitioned curvature for 100k+ node layouts.
+
+Most of the root math stack is intentionally dormant relative to this product. See
+`docs/SILICON_PRODUCT_BOUNDARY.md` before wiring in more machinery.

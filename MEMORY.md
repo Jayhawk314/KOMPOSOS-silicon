@@ -49,6 +49,31 @@ up. For *how to work in the repo*, see `CLAUDE.md`; for *what it is*, see `READM
   REJECT) was a silent no‑op and rejected edges persisted. Added; rollbacks now remove.
 - **Tests**: 140 passing (`python -m pytest tests/ -q`).
 
+## Current silicon status override (2026-06-20)
+
+This supersedes the older 2026-06-19 silicon notes below. Start from
+`docs/HANDOFF.md`; current findings are in `docs/SILICON_FINDINGS.md`, status in
+`docs/SILICON_STATUS.md`, and the dormant-math audit in
+`docs/SILICON_PRODUCT_BOUNDARY.md`.
+
+- **Current product:** a mature-node reliability co-design layer. It finds IR/EM
+  physical-stress hotspots from real layout data, proposes cited material/geometry
+  fixes, and keeps only actions whose tradeoff is proven with a receipt.
+- **What was falsified:** cheap structural timing prediction on optimized layouts.
+  Timing is not the product.
+- **Measured wins:** structure predicts mature-node real IR-drop at about +0.4 to
+  +0.6 and real measured EM current at about +0.64. The 7nm ASAP7 test fails and
+  density inverts, so the product scope is mature nodes unless more PDN/design
+  evidence says otherwise.
+- **Trust layer:** external or learned proposers are proposal-side only. The learned
+  IR predictor is accepted only after held-out validation; fabricated metal-property
+  rationales are blocked against cited facts.
+- **Dormant math boundary:** the reliability product should not depend on the root
+  math engines (`oracle/`, `zfc/`, `hott/`, `cubical/`, `game/`, `operadum/`, most
+  `categorical/`, `topology/`, `geometry/`) unless the new use passes the same
+  measured/cited receipt rule.
+
+
 ## Active project: Silicon co‑design domain (updated 2026‑06‑19)
 
 The chosen real domain is **semiconductor co‑design**. Full plan in

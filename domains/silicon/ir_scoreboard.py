@@ -124,7 +124,6 @@ def ir_scoreboard(def_path: str, spef_path: str, lef_path: str, voltage_path: st
     pos, drop = parse_ir_voltage(voltage_path, supply_v)
 
     bridge = NetlistBridge(def_path, spef_path, lef_path=lef_path)
-    bridge.load()
     inst_cap: Dict[str, float] = {}
     inst_fanout: Dict[str, float] = {}
     inst_demand: Dict[str, float] = {}        # cap x fanout — the hotspot detector's metric

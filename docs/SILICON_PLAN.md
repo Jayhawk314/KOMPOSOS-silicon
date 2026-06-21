@@ -6,6 +6,11 @@
 > `docs/SESSIONS.md`). Code is the source of truth for *how things work* — this
 > doc must never contradict the code.
 
+> **2026-06-20 status note:** the implementation has moved beyond the original rung
+> plan. Start with `docs/HANDOFF.md`, `docs/SILICON_FINDINGS.md`, and
+> `docs/SILICON_PRODUCT_BOUNDARY.md` for the current reliability product, measured
+> results, and dormant-math boundary.
+
 ---
 
 ## 0. One sentence

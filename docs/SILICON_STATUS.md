@@ -7,6 +7,14 @@
 
 ## Executive status
 
+**Current snapshot (2026-06-20, after `docs/HANDOFF.md`):** the product is the
+mature-node reliability co-design layer, not the timing predictor. Timing triage was
+falsified on optimized self-minted layouts; mature-node IR-drop and measured EM-current
+hotspot detection passed against real OpenROAD output. The reliability report now runs
+find -> fix -> prove with cited material grounding, an evidence ladder, and a trust gate
+over external/learned proposers. The root math stack is mostly substrate/dormant relative
+to this product; see `docs/SILICON_PRODUCT_BOUNDARY.md`.
+
 The baseline silicon vertical is working end to end. It can ingest material
 stacks and DEF/SPEF layouts, construct a shared `Category`, run structural flow
 geometry, and emit a provenance-bearing waste ledger through a local CLI. The
@@ -41,7 +49,7 @@ real STA output and its design context have not been ingested.
 | SPEF scoreboard | Complete and committed | Real layouts beat a shuffled control | Validates screening against extracted capacitance only |
 | LEF ingestion | Working tree | Nangate45 parsing, real output-pin direction tests, scoreboard delta | Area features are weak; direction correction is the main gain |
 | STA ingestion | **Complete — real measured-tier report ingested (2026-06-20)** | Real grammar variants, source/context hashes, critical-net mapping, ledger + scoreboard tests; `parse_sta` verified on the project's `mcmm3.ok` golden (multi-corner) + committed real-format regression test. **Ran real OpenSTA 2.6.2 (`openroad/opensta` image) on `gcd_sky130hd`: 53 paths, `is_evidence=True`, CLI `sta` → `status: "measured"` with hashed netlist/Liberty/SDC receipts. Relaxed clock (5 ns) meets timing (+0.065 ns); tight clock (1 ns) yields 52/53 real violations (−3.94 ns). Reproducer: `domains/silicon/sta_flows/`** | `measured` tier is now populated on a real design. WSL/Docker revived 2026-06-20. Remaining: a design for which we hold BOTH a DEF and a matched `report_checks`, to run the structural-triage vs real-timing scoreboard (gcd_sky130hd ships no DEF) |
-| Full test suite | Passing | `244 passed` on 2026-06-20 (214 baseline + 8 tiles + 8 IR-drop/EM + 6 fix-loop + 8 scale) | Real-data tests skip when local gitignored files are absent |
+| Full test suite | Passing | `281 passed` observed on 2026-06-20 before this cleanup pass | Real-data tests skip when local gitignored files are absent |
 
 Committed work currently ends at the SPEF scoreboard commit (`4e736ec`). LEF/STA,
 operadic nets, Verilog crosswalking, their tests, and bridge/ledger changes are uncommitted.
@@ -96,26 +104,25 @@ It proves parser and ledger behavior only. The fixture marker cannot be overridd
 Unmarked reports default to `unverified`; `--sta-source tool` plus hashed netlist,
 Liberty, and constraints are required before making timing claims about a design.
 
-## What is not built yet
+## Remaining gaps
 
-- Gate-level structural Verilog, DEF identity matching, and exact artifact-nerve
-  cohomology are built. RTL behavioral semantics and independent third-view
-  calibrations needed for real H1 evidence are not.
+- RTL behavioral semantics and independent third-view calibrations needed for real H1
+  evidence are still not product evidence.
 - The n-ary net source is built, but graph-only algorithms still use its driver-star
   projection. Without LEF that projection is explicitly `def_order_fallback` and can
   affect degree and curvature.
-- No gates-to-tiles left Kan extension or comparison with tile telemetry.
-- No IR-drop, current-density, electromigration, SPICE, or DFT evidence loader.
-- No silicon use of `GenerativeLoop`; proposed fixes do not become verified
-  primitives for later passes.
+- Real per-segment current density still needs trustworthy wire widths/cross-sections;
+  current validation is measured EM current binned to tiles, not foundry EM signoff.
+- The 7nm ASAP7 IR-drop test fails and density inverts, so advanced-node coverage is
+  not claimed without more PDN/design evidence.
 - No local CHEM metal/semiconductor cross-bridge or Crystal Dreamer integration.
-- No power/timing/area open-game objective and no GNN proposal prior.
+- No power/timing/area open-game objective is productized.
+- The main remaining decision is strategic: mature-node reliability layer, trust layer
+  for AI/EDA proposals, or both.
 
-The substrate has generic Kan extensions, `GenerativeLoop`, and open games that the
-silicon vertical still does not call. `topology/persistent_sheaves.py` now has exact
-finite cochain ranks/nullspaces and localized H1 bases alongside its older scalar
-heuristic. The silicon adapter refuses to infer missing calibration edges, so current
-two-view chains do not manufacture obstructions.
+The root math substrate remains available, but it is dormant relative to the reliability
+product unless a module earns a measured/cited receipt. See
+`docs/SILICON_PRODUCT_BOUNDARY.md`.
 
 ## Remaining milestone: real STA validation
 
@@ -208,6 +215,6 @@ aren't synthesis outputs; feed the self-minting flow more designs to build a lab
 
 - Add a reproducible downloader/manifest with source URLs and hashes for the local
   OpenROAD files; currently the real data is gitignored and tests silently skip.
-- Reduce heavy import side effects that emit TensorFlow/ESMFold and missing-module
-  warnings during the lightweight silicon scoreboard.
+- Keep the reliability product import path lean. `tests/test_silicon_product_boundary.py`
+  blocks accidental imports of dormant root math engines from the product entry points.
 - Update module status docstrings and CLI manifests as capabilities graduate.
