@@ -35,9 +35,13 @@ front of the right eyes. Recommended order: **1 → 4 → 5 → 2 → 6 → 3.**
   result, the "disproved my own hypotheses" honesty hook. Root README points at it.
   `tests/test_silicon_api.py` (3, runs on the committed fixture).
 
-- [ ] **5. A short honest writeup / post — lead with the failures.**
-  The idea, one validated result, and "I disproved two of my own hypotheses with controls."
-  The honesty is the hook. Effort: low.
+- [x] **5. A short honest writeup / post — lead with the failures.** ✅ DONE (2026-06-21)
+  `docs/WRITEUP.md` — a publishable first-person post that opens with the two disproved
+  hypotheses (curvature is design-dependent per-net; timing slack isn't structurally
+  predictable), then the verification-first idea, the measured +0.845 result, the coherence +
+  trust-gate checks, honest boundaries, and the 30-second demo. Every claim tied to a run; the
+  curvature claim corrected to match observed numbers (gcd +0.64 / 45_gcd +0.16). *Remaining:
+  actually post it (that's #6).*
 
 - [ ] **6. Aim it at the receptive audience.**
   Applied category theory (Topos / ACT), trustworthy/verifiable-AI ("safeguarded AI"), and the
