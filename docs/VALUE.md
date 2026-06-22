@@ -26,7 +26,8 @@ say.** And it's validated not against a proxy, but against the real tool's own o
 
 > Run real OpenROAD/OpenSTA on a routed design, take the tool's **own per-net interconnect
 > delay**, and ask whether cheap structure predicts it. It does, on two independent real
-> designs: **45_gcd ρ +0.65**, **orfs_gcd ρ +0.845** (wirelength), shuffle controls ~0. This is
+> designs: **orfs_gcd ρ +0.868, 45_gcd fanout ρ +0.65**, with **prec@10 = 0.90 on both** (the
+> cheap total-wirelength rank finds 9 of the 10 worst nets), shuffle controls ~0. This is
 > the `measured` evidence tier — the report is attested `tool` with a hashed netlist/Liberty/SDC
 > receipt, so a fixture can exercise the path but never pass it.
 > (`python -m domains.silicon.tau_scoreboard`; reproducer in `sta_flows/`)

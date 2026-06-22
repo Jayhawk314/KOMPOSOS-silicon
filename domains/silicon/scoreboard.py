@@ -105,6 +105,7 @@ class NetFeatures:
     degree: float             # sum of endpoint degrees; topology only
     fanout: float             # netlist
     wirelength: float         # max edge length (microns) from placement; 0 if no coords
+    total_wirelength: float   # SUM of star-edge lengths (um); total-wire proxy for delay
     driver_area: float        # LEF: driver cell area (drive strength proxy); 0 w/o LEF
     sink_area: float          # LEF: sum of sink cell areas (pin-cap proxy); 0 w/o LEF
     cap: Optional[float]      # SPEF total capacitance; absent for timing-only scoring
@@ -147,6 +148,7 @@ def collect_features(bridge: NetlistBridge,
             degree=float(deg),
             fanout=float(edges[0].metadata.get("fanout", len(edges))),
             wirelength=float(max(wls)) if wls else 0.0,
+            total_wirelength=float(sum(wls)) if wls else 0.0,
             driver_area=bridge.cell_area(driver),
             sink_area=float(sum(bridge.cell_area(s) for s in sinks)),
             cap=float(cap) if cap is not None else None))
@@ -158,7 +160,7 @@ def collect_features(bridge: NetlistBridge,
 # ═══════════════════════════════════════════════════════════════════════════
 
 PREDICTORS = ("neg_curvature", "degree", "fanout", "wirelength",
-              "driver_area", "sink_area")
+              "total_wirelength", "driver_area", "sink_area")
 
 
 @dataclass
