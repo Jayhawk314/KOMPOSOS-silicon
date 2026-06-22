@@ -164,6 +164,70 @@ def fidelity_coherence(v: View, d: View, s: View, agree_threshold: float = 0.75)
         h1_support=coh.h1_support)
 
 
+@dataclass
+class StageDivergence:
+    """Cross-stage netlist coherence: where two flow stages of ONE design diverge."""
+    early: str
+    late: str
+    n_early_nets: int
+    n_late_nets: int
+    identical_nets: int                          # same terminal set across stages
+    divergent_nets: int                          # nets that exist only in the later stage
+    inserted_cells: Dict[str, int] = field(default_factory=dict)   # cell type -> count
+    sample_divergent: List[str] = field(default_factory=list)
+
+    @property
+    def preserved_fraction(self) -> float:
+        return self.identical_nets / self.n_early_nets if self.n_early_nets else 1.0
+
+    def render(self) -> str:
+        cells = ", ".join(f"{c}x{n}" for c, n in
+                          sorted(self.inserted_cells.items(), key=lambda kv: -kv[1])[:6])
+        return "\n".join([
+            f"[CROSS-STAGE COHERENCE] {self.early} -> {self.late}",
+            f"   {self.identical_nets}/{self.n_early_nets} nets preserved with IDENTICAL "
+            f"connectivity ({self.preserved_fraction:.0%})",
+            f"   {self.divergent_nets} divergent nets localized to inserted cells: {cells}",
+            f"   sample divergent nets: {self.sample_divergent[:6]}",
+        ])
+
+
+def _norm_inst(inst: str) -> str:
+    return inst.replace(chr(92), "")
+
+
+def stage_coherence(early_path: str, late_path: str) -> StageDivergence:
+    """Run the coherence engine on TWO real flow stages of one design (e.g. synthesis vs
+    final). They are logically equivalent (the flow's own LEC certifies it) but structurally
+    different; this localizes the divergence to the cells the flow actually inserted (CTS
+    clock buffers, hold/fanout buffers). A structural what-changed check on real tool output,
+    not a synthetic fault. Tier: structural_only."""
+    from .verilog import load_verilog
+    e_view, l_view = verilog_view(early_path), verilog_view(late_path)
+    late_nl = load_verilog(late_path)
+    early_nl = load_verilog(early_path)
+    cell_of = {_norm_inst(i): vi.cell for i, vi in late_nl.instances.items()}
+    early_insts = {_norm_inst(i) for i in early_nl.instances}
+
+    e_ts = set(e_view.values())
+    late_only = {net: ts for net, ts in l_view.items() if ts not in e_ts}
+    identical = sum(1 for ts in e_view.values() if ts in set(l_view.values()))
+
+    inserted: Dict[str, int] = {}
+    for ts in late_only.values():
+        for inst, _pin in ts:
+            ni = _norm_inst(inst)
+            if ni not in early_insts:             # genuinely inserted by the flow
+                ct = cell_of.get(ni)
+                if ct:
+                    inserted[ct] = inserted.get(ct, 0) + 1
+    return StageDivergence(
+        early=os.path.basename(early_path), late=os.path.basename(late_path),
+        n_early_nets=len(e_view), n_late_nets=len(l_view),
+        identical_nets=identical, divergent_nets=len(late_only),
+        inserted_cells=inserted, sample_divergent=sorted(late_only)[:8])
+
+
 def main() -> None:
     print("KOMPOSOS-V | silicon three-view net-fidelity coherence (Track 3, Step A)")
     print("=" * 70)
@@ -178,6 +242,12 @@ def main() -> None:
     s = spef_view(sp)
     print(f"views: verilog={len(v)} nets  def={len(d)} nets  spef={len(s)} nets\n")
     print(fidelity_coherence(v, d, s).render())
+
+    # Cross-stage coherence: a REAL divergence (synthesis vs final), not "all clear".
+    synth = f"{base}/1_2_yosys.v"
+    if os.path.exists(synth):
+        print("\n--- cross-stage coherence: synthesis vs final (real divergence) ---")
+        print(stage_coherence(synth, vp).render())
 
 
 if __name__ == "__main__":

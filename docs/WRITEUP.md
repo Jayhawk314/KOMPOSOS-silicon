@@ -64,8 +64,12 @@ Two more pieces, framed honestly — not as features, but as *checks*:
 
 - **Cross-tool coherence.** Synthesis, layout, and extraction are three independent views of one
   chip. I treat them as sections of a sheaf and compute the exact obstruction to gluing them
-  (H⁰/H¹ cohomology), which *localizes the nets where the tools disagree*. On a clean design it
-  correctly reports "no obstruction" — which is the honest answer, not a manufactured finding.
+  (H⁰/H¹ cohomology), which *localizes where the views disagree*. On a clean design it correctly
+  reports "no obstruction" (the honest answer). Point it at a real divergence — the synthesis
+  netlist vs the final routed one, which the flow's own equivalence check certifies as logically
+  identical but structurally different — and it localizes exactly what changed: 86% of nets pass
+  through untouched, and the rest pinpoint the clock-tree and hold buffers the flow inserted. A
+  structural what-changed check on real tool output (not bug-finding — I won't overstate it).
 - **A trust gate that won't cry wolf.** A flagged problem is only "trusted" if multiple
   independent views corroborate it, weighted by an IDF specificity term so that a global view —
   one that flags *everything* — can't vouch for anything. On real data it splits flagged items

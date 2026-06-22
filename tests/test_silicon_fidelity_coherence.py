@@ -13,7 +13,8 @@ import os
 
 import pytest
 
-from domains.silicon.fidelity_coherence import fidelity_coherence, spef_view, verilog_view, def_view
+from domains.silicon.fidelity_coherence import (
+    fidelity_coherence, spef_view, stage_coherence, verilog_view, def_view)
 
 
 def _mk(nets):
@@ -68,3 +69,20 @@ def test_real_orfs_gcd_three_view_coherent():
     assert rep.coherent_nets >= 400
     # the two physical views (def, spef) agree strongly after escaping normalization
     assert rep.pair_agreement["def~spef"] >= 0.85
+
+
+@pytest.mark.skipif(
+    not os.path.exists(f"{_BASE}/1_2_yosys.v"),
+    reason="orfs_gcd synthesis netlist absent (self-mint via ORFS)")
+def test_cross_stage_coherence_localizes_real_flow_changes():
+    """Two REAL flow stages (synthesis vs final) of one design: logically equivalent (the
+    flow's own LEC certifies it), structurally different. The engine localizes the divergence
+    to the cells the flow actually inserted -- a what-changed check on real tool output."""
+    rep = stage_coherence(f"{_BASE}/1_2_yosys.v", f"{_BASE}/6_final.v")
+    # most nets pass through the whole flow with identical connectivity
+    assert rep.preserved_fraction > 0.8
+    # but there is a real, localized divergence (not "all clear")
+    assert rep.divergent_nets > 0 and rep.sample_divergent
+    # and it localizes to the cells the flow inserted: CTS clock buffers + opt buffers
+    inserted = " ".join(rep.inserted_cells)
+    assert any("BUF" in c or "CLKBUF" in c for c in rep.inserted_cells), inserted

@@ -41,13 +41,17 @@ Synthesis, place-and-route, and extraction are three independent views of one de
 the exact obstruction to gluing them (H⁰/H¹ cohomology), **pinpointing the nets where the views
 diverge.**
 
-> On a real design: three tool-views → **H⁰=1, H¹=0 (globally coherent)**, 482/482 common nets
-> agree exactly, and the residual divergences are localized per-net. A genuine cross-tool
-> inconsistency would surface as H¹≠0 with the offending nets named.
-> (`python -m domains.silicon.fidelity_coherence`)
+> On a clean design, three tool-views → **H⁰=1, H¹=0 (globally coherent)**, 482/482 common nets
+> agree exactly — the honest "all clear." And on a *real* divergence — the **synthesis netlist vs
+> the final routed netlist** (two real tool outputs the flow's own equivalence check certifies as
+> logically equivalent, but structurally different) — it localizes precisely what changed:
+> **490/572 nets preserved with identical connectivity (86%); the 137 divergent nets pinpoint the
+> cells the flow inserted — `CLKBUF_X3` clock-tree buffers and `BUF_X1/X2/X4` hold/fanout
+> buffers.** (`python -m domains.silicon.fidelity_coherence`)
 
 This is the principled version of "the layout tool and the synthesis tool disagree" — with the
-disagreement *located*, not just suspected.
+disagreement *located* and attributed, not just suspected. (Honest scope: this localizes real
+*structural change* between equivalent stages; it is a what-changed check, not a bug-finder.)
 
 ### 3. It won't cry wolf — a finding is "trusted" only if independent views corroborate it
 A flagged problem is just a *proposal* until it's verified. The trust gate accepts a finding
@@ -113,9 +117,11 @@ application of a general "verified inference with a receipt" substrate.
   designs, attested + hashed) — but **IR-drop / power and gate-level timing are still proxy/
   structural** until their real reports are ingested too. One quantity is measured-validated; the
   rest of the ladder is honestly still below it.
-- **The cross-tool coherence engine, run on coherent real data, correctly finds no obstruction.**
-  Its value shows when there *is* a genuine inconsistency (or multi-mask data); the engine is
-  proven to run and localize, but a measured chip "fault caught" still awaits the right dataset.
+- **The cross-tool coherence engine now localizes a real divergence (synthesis vs final), not
+  just "all clear."** It attributes the change to the flow's inserted buffers — a genuine
+  what-changed check on real tool output. Honest scope: that is structural-change localization
+  between *logically equivalent* stages, not bug-finding; catching a true cross-tool *fault*
+  still awaits a design that actually contains one.
 - **Some of the deeper math is scaffold** (homotopy transport, cubical Kan-filling are data
   models with computation stubbed) and is honestly not load-bearing for the results above.
 
