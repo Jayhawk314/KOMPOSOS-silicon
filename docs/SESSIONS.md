@@ -5,6 +5,38 @@
 
 ---
 
+## 2026-06-21 (later 7) — ROADMAP #2: scouted + tried a real public buggy design (caravel storage) — principled negative
+
+Scouted public buggy designs for a genuine cross-tool fault the coherence engine could catch.
+Landscape finding: real public failures cluster into (a) tool-flagged hard errors (OpenROAD
+routing breaks — no silent-fault value), (b) power/PDN LVS mismatches (forgotten macro power
+hookup), (c) transistor/device-level LVS (parallel/series MOS, RF-device extraction), (d)
+equiv-checker false results (RTL, trivially-different designs). Our engine's unique niche —
+silent *gate-level* netlist-vs-layout connectivity drift in a completed flow — is narrow.
+- Best candidate: `efabless/caravel_mpw-one` #41, `storage` block ("bus index mapping incorrect").
+  Downloaded real `verilog/gl/storage.v` + `def/storage.def` (gitignored under
+  `data/caravel_storage/`), ran `build_crosswalk`. It flagged same-named nets (`_01_`…) with
+  different terminal sets across views — looked like the fault.
+- **Disciplined root-cause (3rd time it paid off):** the discrepancy was OURS — the verilog parser
+  stores a bus-pin concatenation (`SRAM_1 .addr1({_08_,…,_01_})`) as one opaque net instead of
+  expanding it to per-bit connections (addr1[0]=_01_ …). Expanding by hand, **storage.v and
+  storage.def agree on all 8 address bits** — the netlist and layout (same OpenLane flow) are
+  mutually consistent. The documented "bus index mapping incorrect" fault is at the SRAM
+  **macro-pin / device-extraction** level (the macro's physical addr order vs declared pins) —
+  *below* our gate-level abstraction; we treat the SRAM as a black box and structurally can't see
+  it. Honest negative, with concrete evidence — confirms the scouting-stage suspicion.
+- **Found a 3rd real parser limitation** (bus-concatenation expansion on macro pins). Not fixed:
+  it's a non-trivial change and would NOT make this fault catchable (the fault is below our
+  abstraction). Noted for any future macro-heavy design work.
+- **Conclusion for #2:** real public chip faults are predominantly device-/power-level; gate-level
+  artifacts from one clean flow are mutually consistent (no fault to catch). The engine's real
+  niche is cross-TOOL (independent toolchains) or cross-STAGE (synthesis-vs-final, already
+  demoed) gate-level divergence. The strongest honest "caught a real fault" story we have remains
+  this session-6 result: the engine caught two silent bugs in its own pipeline, one of which had
+  corrupted a committed result. **Next:** pivot to ROADMAP #6 (visibility) — that negative-result
+  rigor + the self-caught-bug story is exactly what the receptive audience (ACT / verifiable-AI /
+  open-EDA) respects.
+
 ## 2026-06-21 (later 6) — ROADMAP #2 (catch a real fault): engine caught two real ADAPTER bugs ✅
 
 Chased "catch a real cross-tool fault" by running the three-view coherence engine on the larger
