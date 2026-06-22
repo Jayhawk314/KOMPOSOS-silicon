@@ -35,9 +35,14 @@ class VerilogNetlist:
                 if _is_constant(net):
                     continue
                 endpoints.setdefault(net, set()).add((instance.name, pin))
-        for port in self.ports:
-            if port in endpoints:
-                endpoints[port].add(("PIN", port))
+        # A net carries a top-level PIN terminal if it is a scalar port (`clk`) OR a bit of a
+        # bus port (`req_msg[0]`, whose declaration collapses to base name `req_msg`). DEF lists
+        # each port bit as a pin, so without the bus case the logical view is missing those
+        # terminals and disagrees with DEF on every bus-port net.
+        for net in endpoints:
+            base = re.sub(r"\[\d+\]$", "", net)
+            if net in self.ports or base in self.ports:
+                endpoints[net].add(("PIN", net))
         return endpoints
 
 
@@ -143,9 +148,14 @@ def parse_verilog(text: str) -> VerilogNetlist:
     instances: Dict[str, VerilogInstance] = {}
     reserved = {"module", "input", "output", "inout", "wire", "logic",
                 "reg", "assign", "always", "endmodule"}
+    # Cell type and instance name. An instance name may be an *escaped identifier*
+    # (`\name[i]$... ` -- a backslash then non-whitespace, terminated by whitespace per
+    # the Verilog spec), which can contain `[`, `]`, `$`. A plain `[\\\w$]+` class stops
+    # at the first `[`, silently dropping every sequential cell (flop Q/QN drivers) -- so
+    # match an escaped identifier as a whole token before falling back to a plain name.
     pattern = re.compile(
-        r"(?ms)^\s*([\\\w$]+)\s+(?:#\s*\(.*?\)\s*)?"
-        r"([\\\w$]+)\s*\((.*?)\)\s*;")
+        r"(?ms)^\s*(\\\S+|[\w$]+)\s+(?:#\s*\(.*?\)\s*)?"
+        r"(\\\S+|[\w$]+)\s*\((.*?)\)\s*;")
     for match in pattern.finditer(text):
         cell, name, body = (_clean_identifier(match.group(i)) for i in (1, 2, 3))
         if cell in reserved:

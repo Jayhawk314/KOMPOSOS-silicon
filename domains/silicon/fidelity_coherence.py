@@ -62,8 +62,12 @@ def verilog_view(path: str) -> View:
 def def_view(def_path: str, spef_path: str, lef_path: str | None) -> Tuple[View, object]:
     from .netlist_bridge import NetlistBridge
     bridge = NetlistBridge(def_path, spef_path, lef_path=lef_path)
-    out: View = {net.name: frozenset(_norm(c) for c in net.conns)
+    # Compare instance-pin connectivity only, consistently across all three views: DEF lists
+    # each top-level port as a ('PIN', port) terminal, but verilog_view strips PINs and SPEF
+    # has no port concept -- so keeping them here would make every port net spuriously disagree.
+    out: View = {net.name: frozenset(_norm(c) for c in net.conns if c[0] != "PIN")
                  for net in bridge.signal_nets}
+    out = {net: terms for net, terms in out.items() if terms}
     return out, bridge
 
 

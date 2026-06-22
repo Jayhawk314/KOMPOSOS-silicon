@@ -53,6 +53,35 @@ def test_parse_structural_verilog_ports_buses_and_instances():
     assert "1'b0" not in netlist.endpoints_by_net()
 
 
+# A sequential cell whose instance name is an *escaped identifier* (`\name[i]$... `):
+# real flows (Yosys/OpenROAD) name every flop this way. The bracket must not truncate the
+# instance match, or the flop -- and its Q/QN driver -- vanishes from the logical view.
+ESCAPED_VERILOG = """
+module seq(input clk, input d, output q);
+  wire _00000_;
+  DFF_X1 \\state[0]$_DFF_P_  (.D(d),
+    .CK(clk),
+    .Q(q),
+    .QN(_00000_));
+  INV_X1 load (.A(_00000_), .ZN());
+endmodule
+"""
+
+
+def test_parse_escaped_identifier_instance_keeps_sequential_driver():
+    netlist = parse_verilog(ESCAPED_VERILOG)
+    # the flop instance is parsed despite the bracketed escaped name ...
+    assert "state[0]$_DFF_P_" in netlist.instances
+    flop = netlist.instances["state[0]$_DFF_P_"]
+    assert flop.cell == "DFF_X1"
+    assert flop.connections["Q"] == "q"
+    assert flop.connections["QN"] == "_00000_"
+    # ... so the net _00000_ carries BOTH its flop driver and its sink (not just the sink).
+    endpoints = netlist.endpoints_by_net()
+    assert ("state[0]$_DFF_P_", "QN") in endpoints["_00000_"]
+    assert ("load", "A") in endpoints["_00000_"]
+
+
 def test_crosswalk_matches_renamed_net_by_terminal_identity(tmp_path):
     crosswalk = build_crosswalk(parse_verilog(VERILOG), _bridge(tmp_path))
     match = next(match for match in crosswalk.matches

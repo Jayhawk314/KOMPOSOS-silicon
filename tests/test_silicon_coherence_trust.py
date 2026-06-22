@@ -140,7 +140,7 @@ def test_3a_global_pair_is_downweighted():
 @pytest.mark.skipif(
     not os.path.exists("domains/silicon/data/orfs_gcd/results/base/6_final.v"),
     reason="orfs_gcd verilog/def/spef absent")
-def test_3a_real_divergences_discriminate():
+def test_3a_real_divergences_gate_to_structural_trusted():
     from domains.silicon.fidelity_coherence import (
         def_view, fidelity_coherence, spef_view, verilog_view)
     base = "domains/silicon/data/orfs_gcd/results/base"
@@ -150,8 +150,14 @@ def test_3a_real_divergences_discriminate():
                     lef if os.path.exists(lef) else None)
     s = spef_view(f"{base}/6_final.spef")
     rep = fidelity_coherence(v, d, s)
+    # With faithful adapters this is a CLEAN flow: all three views agree on shared connectivity
+    # (every pairwise agreement 1.0), so the only residual divergences are view-size deltas
+    # (a net present in one view but not another) -- and each such net shows up in exactly two
+    # of the three view-pairs, so the gate corroborates them all. The discrimination property
+    # (corroborated vs single-view, global-view down-weighting) is proven on synthetic inputs by
+    # `test_3a_multi_pair_trusted_single_pair_not` / `test_3a_global_pair_is_downweighted`.
     verdicts = trust_fidelity_divergences(rep.disagreements, rep.n_common_nets)
     counts = summarize(verdicts)
-    # the gate must actually discriminate, not pass/fail everything, and never promote tier
-    assert counts["TRUSTED"] > 0 and counts["UNCORROBORATED"] > 0
-    assert all(v.tier == "structural_only" for v in verdicts)
+    assert verdicts and counts["TRUSTED"] > 0            # the gate runs on real divergences
+    assert all(v.tier == "structural_only" for v in verdicts)   # never promoted to foundry EPE
+    assert counts["UNCORROBORATED"] == 0                 # clean flow -> no single-view-only nets

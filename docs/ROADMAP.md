@@ -16,7 +16,7 @@ front of the right eyes. Recommended order: **1 → 4 → 5 → 2 → 6 → 3.**
 - [x] **2. Show coherence on a REAL divergence (not "all clear").** ✅ DONE (2026-06-21)
   Ungated with data we already held: the ORFS intermediate netlists. `stage_coherence(synthesis,
   final)` runs the engine on two real flow stages of one design (logically equivalent per the
-  flow's own LEC, structurally different). Result: **490/572 nets (86%) preserved with identical
+  flow's own LEC, structurally different). Result: **509/592 nets (86%) preserved with identical
   connectivity; the 137 divergent nets localize to the cells the flow inserted — `CLKBUF_X3`
   clock buffers, `BUF_X1/X2/X4` hold/fanout buffers.** `tests/test_silicon_fidelity_coherence.py`
   guards it. *Honest scope: this is structural what-changed localization between equivalent

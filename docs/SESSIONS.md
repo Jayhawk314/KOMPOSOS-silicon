@@ -5,6 +5,38 @@
 
 ---
 
+## 2026-06-21 (later 6) — ROADMAP #2 (catch a real fault): engine caught two real ADAPTER bugs ✅
+
+Chased "catch a real cross-tool fault" by running the three-view coherence engine on the larger
+real designs we hold (aes 14.5k nets, ibex 15.7k nets), not just gcd. Both flagged large
+divergences — ibex's logical view literally failed to glue (H0=2). Root-causing the divergence
+(the disciplined part) found the cause was **two real defects in our own adapters**, not a chip
+fault:
+1. **`verilog.py` dropped every escaped-identifier instance.** The instance-name regex class
+   `[\\\w$]+` stops at `[`, so every sequential cell (`\state[0]$_DFF_P_ `, i.e. ALL flops) was
+   silently skipped — removing every Q/QN driver from the logical view. gcd alone dropped ~579
+   instances. This had corrupted the committed Track 3A result (the "coherent" verdict was
+   measured on a flop-less logical view). Fixed the regex to match escaped identifiers as whole
+   tokens; added `test_parse_escaped_identifier_instance_keeps_sequential_driver`.
+2. **Port-PIN vocabulary mismatch.** `def_view` kept top-level `('PIN', port)` terminals while
+   `verilog_view` stripped them and SPEF has no port concept — so every bus-port net spuriously
+   disagreed. Made the comparison instance-pin-only across all three views; also taught
+   `endpoints_by_net` to give bus-port bits their PIN terminal (helps `build_crosswalk`).
+- **Result after the fixes:** all three real designs (gcd, aes, ibex) are now **fully coherent
+  across verilog/def/spef — every pairwise agreement 1.000, H0=1, H1=0.** gcd three-view
+  482→**621/621** common nets; the ibex H0=2 "obstruction" was entirely our bug and is gone.
+- Updated the stale gcd numbers in VALUE / ROADMAP / SILICON_POSTMOORE_PLAN (482→621 three-view;
+  490/572→**509/592** stage-coherence, 137 inserted buffers unchanged). Updated the now-clean-data
+  trust test (`test_3a_…_gate_to_structural_trusted`): on faithful adapters gcd's only divergences
+  are corroborated view-size deltas, so discrimination is proven by the synthetic unit tests.
+- Full suite **332 passed**.
+- **Honest takeaway for #2:** clean open flows (ORFS) are coherent by construction, so the engine
+  finds no *chip* fault on them — but it earned its keep by catching real defects in our own
+  pipeline (one that had corrupted a committed result). A faithful detector with zero known
+  false-positives is now the precondition for credibly flagging a real silicon fault. **Next:** to
+  catch a true cross-tool *chip* fault we need a design that actually contains one — a genuinely
+  buggy public artifact or two independent tool chains on one RTL (data-scouting step).
+
 ## 2026-06-21 (later 5) — Doc-hygiene pass: re-aim goal + fix stale markers ✅
 
 Re-grounded the older planning docs on the corrected goal (a genuinely useful, receipt-backed

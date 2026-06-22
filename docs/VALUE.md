@@ -41,11 +41,12 @@ Synthesis, place-and-route, and extraction are three independent views of one de
 the exact obstruction to gluing them (H⁰/H¹ cohomology), **pinpointing the nets where the views
 diverge.**
 
-> On a clean design, three tool-views → **H⁰=1, H¹=0 (globally coherent)**, 482/482 common nets
-> agree exactly — the honest "all clear." And on a *real* divergence — the **synthesis netlist vs
-> the final routed netlist** (two real tool outputs the flow's own equivalence check certifies as
-> logically equivalent, but structurally different) — it localizes precisely what changed:
-> **490/572 nets preserved with identical connectivity (86%); the 137 divergent nets pinpoint the
+> On a clean design, three tool-views → **H⁰=1, H¹=0 (globally coherent)**, 621/621 common nets
+> agree exactly (all three pairwise views match 1.000) — the honest "all clear." And on a *real*
+> divergence — the **synthesis netlist vs the final routed netlist** (two real tool outputs the
+> flow's own equivalence check certifies as logically equivalent, but structurally different) — it
+> localizes precisely what changed:
+> **509/592 nets preserved with identical connectivity (86%); the 137 divergent nets pinpoint the
 > cells the flow inserted — `CLKBUF_X3` clock-tree buffers and `BUF_X1/X2/X4` hold/fanout
 > buffers.** (`python -m domains.silicon.fidelity_coherence`)
 

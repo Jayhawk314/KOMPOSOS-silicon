@@ -152,9 +152,13 @@ independent views of the same target → mask disagreement = a real H¹ obstruct
 - **Step A — DONE ✅ (`fidelity_coherence.py`).** Three independent tool views of net
   connectivity on self-minted `orfs_gcd` — verilog (synth), def (route), spef `*CONN`
   (extraction), each net→terminal-set, cross-view identity by terminal set. **Real result:
-  H0=1, H1=0 (coherent, no cyclic obstruction); 482/627 nets agree exactly across all three;
-  def~spef 0.915 after escaping normalization.** Divergences are representational (name
-  escaping + verilog flop-pin scope), localized per net — not logical faults. H¹
+  H0=1, H1=0 (coherent, no cyclic obstruction); 621/621 nets agree exactly across all three —
+  every pairwise view matches 1.000.** (Earlier runs showed ~0.9 agreement; root-causing that
+  divergence found two real defects in our own adapters — the verilog parser silently dropped
+  every escaped-identifier sequential cell, i.e. all flops, and the def/verilog views compared
+  inconsistent port-PIN vocabularies. Both fixed 2026-06-21; the engine flagged its own pipeline
+  bugs before they reached a verdict.) Residual divergences are representational, localized per
+  net — not logical faults. H¹
   obstruction-localization demonstrated on the cyclic (EPE-shaped) case (unfilled triangle →
   H1=1, localized); injected faults localize. `tests/test_silicon_fidelity_coherence.py` (4).
   The engine is wired to real silicon with a receipt; the "is it even wired" risk is gone.
