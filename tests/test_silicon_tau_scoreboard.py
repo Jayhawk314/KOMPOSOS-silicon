@@ -131,4 +131,35 @@ def test_tau_scoreboard_measured_on_real_orfs_gcd():
     assert rep.evidence_eligible and rep.source_kind == "tool"   # measured, attested + hashed
     assert rep.passed
     assert rep.best[1] > 0.4               # structure predicts measured wire delay (obs +0.845)
+    assert rep.best[0] == "total_wirelength"   # total-wire beats max-edge on every real design
+    assert abs(rep.control_rho) < 0.20
+
+
+# Two LARGER real designs (~3.3k scored nets each) so the predictor gain is measurable signal,
+# not two-small-layout luck. total_wirelength is the best predictor on all four.
+_LARGE = {
+    "aes": "domains/silicon/data/orfs_aes/results/nangate45/aes/base",
+    "ibex": "domains/silicon/data/orfs_ibex/results/nangate45/ibex/base",
+}
+
+
+@pytest.mark.parametrize("design,base", sorted(_LARGE.items()))
+@pytest.mark.skipif(
+    not all(os.path.exists(f"{b}/6_final.netdelay.report_checks.txt") for b in _LARGE.values()),
+    reason="aes/ibex net-delay reports absent (run sta_flows/orfs_design_netdelay_sta.tcl via Docker)")
+def test_tau_scoreboard_measured_on_large_designs(design, base):
+    """measured tier on the larger self-minted designs (aes, ibex). Confirms total_wirelength
+    is the best predictor and beats max-edge wirelength at scale (aes prec@10 0.10 -> 0.60)."""
+    rep = tau_scoreboard_measured(
+        f"{base}/6_final.def", f"{base}/6_final.spef",
+        "domains/silicon/data/openlane/Nangate45.lef",
+        f"{base}/6_final.netdelay.report_checks.txt", design=design,
+        sta_source_kind="tool",
+        sta_context_paths={"netlist": f"{base}/6_final.v",
+                           "liberty": "domains/silicon/data/early_gcd/NangateOpenCellLibrary_typical.lib",
+                           "constraints": f"{base}/6_final.sdc"})
+    assert rep.n_nets > 1000                                     # large sample
+    assert rep.evidence_eligible and rep.source_kind == "tool"
+    assert rep.passed and rep.best[0] == "total_wirelength"
+    assert rep.spearman["total_wirelength"] > rep.spearman["wirelength"]   # beats max-edge
     assert abs(rep.control_rho) < 0.20

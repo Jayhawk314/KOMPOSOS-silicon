@@ -25,9 +25,10 @@ signals — fan-out, connectivity, curvature — in seconds and **predicts what 
 say.** And it's validated not against a proxy, but against the real tool's own output:
 
 > Run real OpenROAD/OpenSTA on a routed design, take the tool's **own per-net interconnect
-> delay**, and ask whether cheap structure predicts it. It does, on two independent real
-> designs: **orfs_gcd ρ +0.868, 45_gcd fanout ρ +0.65**, with **prec@10 = 0.90 on both** (the
-> cheap total-wirelength rank finds 9 of the 10 worst nets), shuffle controls ~0. This is
+> delay**, and ask whether cheap structure predicts it. It does, on **four independent real
+> designs** (gcd 0.3k–0.5k nets, aes & ibex ~3.3k each): the cheap **total-wirelength** rank is
+> the best predictor on every one (**ρ +0.56 to +0.87**, beating the longest-single-edge proxy
+> in all four), shuffle controls ~0. This is
 > the `measured` evidence tier — the report is attested `tool` with a hashed netlist/Liberty/SDC
 > receipt, so a fixture can exercise the path but never pass it.
 > (`python -m domains.silicon.tau_scoreboard`; reproducer in `sta_flows/`)

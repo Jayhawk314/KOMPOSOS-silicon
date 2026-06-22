@@ -172,6 +172,23 @@ def main() -> None:
                                "constraints": f"{o}/6_final.sdc"})
         print(orep.render())
 
+    # larger self-minted designs (aes ~3.3k, ibex ~3.3k scored nets) so the predictor gain is
+    # measurable signal, not two-small-layout luck. Reproduce via sta_flows/orfs_design_netdelay_sta.tcl.
+    olef = "domains/silicon/data/openlane/Nangate45.lef"
+    olib = "domains/silicon/data/early_gcd/NangateOpenCellLibrary_typical.lib"
+    for name, lbase in (("aes", "orfs_aes/results/nangate45/aes/base"),
+                        ("ibex", "orfs_ibex/results/nangate45/ibex/base")):
+        b = f"domains/silicon/data/{lbase}"
+        ndr = f"{b}/6_final.netdelay.report_checks.txt"
+        if os.path.exists(ndr):
+            print(f"\n--- measured tier on {name} (larger real design) ---")
+            print(tau_scoreboard_measured(
+                f"{b}/6_final.def", f"{b}/6_final.spef",
+                olef if os.path.exists(olef) else None, ndr, design=name,
+                sta_source_kind="tool",
+                sta_context_paths={"netlist": f"{b}/6_final.v", "liberty": olib,
+                                   "constraints": f"{b}/6_final.sdc"}).render())
+
 
 if __name__ == "__main__":
     main()
