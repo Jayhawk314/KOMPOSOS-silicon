@@ -5,6 +5,30 @@
 
 ---
 
+## 2026-06-21 (later 5) — Doc-hygiene pass: re-aim goal + fix stale markers ✅
+
+Re-grounded the older planning docs on the corrected goal (a genuinely useful, receipt-backed
+tool that saves real effort — free/favor/service, **not a sellable product or a company**; value
+measured by effort saved, not sellability) and fixed markers that contradicted the code. Verified
+first: full suite **331 passed**; confirmed real STA is ingested at the `measured` tier (45_gcd
++0.645, orfs_gcd +0.845) against `sta_flows/`.
+- **HANDOFF.md**: §7 "strategic question / market call" → "which capability to sharpen next — a
+  value call"; §1 "two product framings" → "two proven capability areas" + the goal statement;
+  added VALUE.md/ROADMAP.md to the top of the reading order; commit `06e27e7`→`741b4ec`, added the
+  real cross-stage divergence to the one-liner.
+- **SILICON_PLAN.md**: Rung 5 "⚠ REAL STA PENDING" → "✅ DONE, REAL STA INGESTED" with the
+  measured ρ's and the honest timing-slack negative; `lef.py`/`sta.py` "(in progress)" → done;
+  status-note reading order + goal statement refreshed.
+- **SILICON_PRODUCT_BOUNDARY.md**: retitled "Silicon Tool Boundary"; "product wedge / reliability
+  product" → "validated tool path"; clarified "boundary" = import discipline, not a product line.
+  Import-discipline content unchanged.
+- **SILICON_STATUS.md**: exec summary reframed to the goal + current reality; fixed the
+  self-contradiction (STA "not been ingested" → ingested); `281 passed`→`331`; "work ends at
+  `4e736ec`" → "all committed, HEAD `741b4ec`"; stale "Remaining" STA note corrected.
+- No technical claims changed — only stale facts corrected and commercial framing retired.
+- **Next (ROADMAP):** #6 (aim it at the receptive audience — the actual goal: eyes on the work);
+  #3 (OpenMPL numeric cross-check, build-gated) remains the open technical item.
+
 ## 2026-06-21 (later 4) — Roadmap #4: one clean entry point + a 3-minute README ✅
 
 Made the value visible. `domains/silicon/api.py`: the single façade (whitepaper §7.2),

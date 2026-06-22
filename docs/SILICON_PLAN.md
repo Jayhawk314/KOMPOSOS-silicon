@@ -6,10 +6,12 @@
 > `docs/SESSIONS.md`). Code is the source of truth for *how things work* — this
 > doc must never contradict the code.
 
-> **2026-06-20 status note:** the implementation has moved beyond the original rung
-> plan. Start with `docs/HANDOFF.md`, `docs/SILICON_FINDINGS.md`, and
-> `docs/SILICON_PRODUCT_BOUNDARY.md` for the current reliability product, measured
-> results, and dormant-math boundary.
+> **2026-06-21 status note:** the implementation has moved beyond the original rung
+> plan. Start with `docs/HANDOFF.md`, `docs/VALUE.md`, and `docs/ROADMAP.md` for what
+> the tool is, what it's worth, and what's next; `docs/SILICON_FINDINGS.md` and
+> `docs/SILICON_PRODUCT_BOUNDARY.md` for measured results and the dormant-math boundary.
+> The goal is a genuinely useful, receipt-backed tool that saves real effort — not a
+> sellable product or a company (see `docs/VALUE.md`).
 
 ---
 
@@ -188,7 +190,7 @@ Build a thing that runs Friday. Don't build the cathedral.
   top-10 overlap 0.80); curvature alone is weak on real data.
 - `tests/test_silicon_scoreboard.py` added 6 tests; the committed suite reached 182.
 
-### Rung 5 — LEF + STA grounding ⚠ CODE COMPLETE, REAL STA PENDING (working tree)
+### Rung 5 — LEF + STA grounding ✅ DONE, REAL STA INGESTED (2026-06-20)
 - LEF parsing supplies real pin direction and cell area. On `45_gcd`, correct driver
   direction raised curvature rho +0.131→+0.286 and wirelength +0.243→+0.438; area
   predictors were weak.
@@ -198,8 +200,12 @@ Build a thing that runs Friday. Don't build the cathedral.
   SPEF/STA `score` commands. Timing scoring uses the same shuffled-control contract.
 - Fixtures are always non-evidence. A measured timing claim requires explicit tool
   attestation plus hashes for the report, gate netlist, Liberty, and SDC constraints.
-- Current full suite after Rung 6: **205 passed**. Only real design-matched STA
-  artifacts remain for timing validation.
+- **Real STA now ingested at the `measured` tier** (Docker `openroad/opensta` + `orfs`):
+  `gcd_sky130hd` (real OpenSTA, 53 paths), and the design-matched scoreboards — `45_gcd`
+  per-net interconnect delay (fanout ρ **+0.645**) and `orfs_gcd` (wirelength ρ **+0.845**),
+  shuffle controls ~0, attested+hashed netlist/Liberty/SDC. The honest negative also landed:
+  gate-level **timing slack** is *not* structurally predictable on a converged layout
+  (`orfs_gcd` all |ρ|<0.15) — the optimizer equalizes it. Reproducers in `sta_flows/`.
 
 ### Rung 6 — Operadic multi-pin nets ✅ DONE IN WORKING TREE (2026-06-19)
 - `domains/silicon/net_operad.py` builds one canonical colored n-ary operation per
@@ -249,8 +255,8 @@ proposal-side GNN. Operadic n-ary net semantics are now built.
 | `waste_ledger.py` | GRID `waste_ledger.py` | tiered, provenance‑backed claims (Rung 3) |
 | `agent_tools.py` | GRID `agent_tools.py` | local‑agent CLI (Rung 3) |
 | `scoreboard.py` | V `core/scoreboard.py` | structural predictors vs SPEF/STA controls |
-| `lef.py` | LEF 5.8 | library pin direction + cell geometry (in progress) |
-| `sta.py` | OpenSTA `report_checks` | timing evidence ingestion (in progress) |
+| `lef.py` | LEF 5.8 | library pin direction + cell geometry (done) |
+| `sta.py` | OpenSTA `report_checks` | timing evidence ingestion (done, real measured tier) |
 | `sources/` | GRID `sources/` + CHEM loaders | data loaders w/ graceful degradation |
 
 ---

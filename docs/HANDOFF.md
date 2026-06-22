@@ -1,8 +1,10 @@
 # KOMPOSOS-Silicon — Handoff (start here)
 
 > Plain-English snapshot to resume this work in a fresh session.
-> Repo branch `main` · latest at handoff: `06e27e7` (2026-06-21).
+> Repo branch `main` · latest at handoff: `741b4ec` (2026-06-21).
 > Deeper docs, in reading order:
+> - `docs/VALUE.md` — **what this is worth and why** (the goal: a useful, receipt-backed tool)
+> - `docs/ROADMAP.md` — from "claimed" to "delivered + seen" (the value-and-visibility plan)
 > - `docs/SILICON_POSTMOORE_PLAN.md` — the **active plan** (3 tracks + status, receipt-gated)
 > - `docs/SILICON_FINDINGS.md` — what's true/false with receipts (reliability era)
 > - `docs/SILICON_MATH_INVENTORY.md` — which math is REAL vs scaffold (read from the code)
@@ -14,10 +16,12 @@
 
 A **verification-backed co-design layer for chips**: point it at a real layout and it finds
 where the chip will physically stress, proposes grounded fixes, and **proves** them — with a
-checkable receipt on every claim. Two product framings now coexist: (A) the **mature-node
-reliability layer** (IR-drop / EM hotspots, proven), and (B) the **post-Moore co-optimization
-+ pattern-fidelity/trust** frontier (interconnect delay, 3D thermal, multi-view + multi-
-patterning coherence) — aimed at the Huawei-τ / TSMC-multipatterning / Intel-DSA reality.
+checkable receipt on every claim. The aim is a genuinely useful, receipt-backed tool that saves
+a real engineer real effort on a real design — free, a favor, or a service, **not a company**
+(see `docs/VALUE.md`). Two proven capability areas coexist: (A) the **mature-node reliability
+layer** (IR-drop / EM hotspots, proven), and (B) the **post-Moore co-optimization +
+pattern-fidelity/trust** frontier (interconnect delay, 3D thermal, multi-view + multi-patterning
+coherence) — aimed at the Huawei-τ / TSMC-multipatterning / Intel-DSA reality.
 
 ## 2. The discipline (the moat — do not break it)
 
@@ -99,16 +103,21 @@ Read the code, not docstrings. From `docs/SILICON_MATH_INVENTORY.md`:
   independent views agree, specificity-weighted, contradictions filtered) is the trust layer
   for EPE/DSA. The rest of the ~60k-line math stack is **not** required by the product.
 
-## 7. The strategic question (still open, it's a market call not a coding one)
+## 7. The open question (which capability to sharpen next — a value call, not a market one)
 
-Is the product the **mature-node reliability layer**, the **post-Moore co-optimization layer**
-(interconnect/thermal), or the **pattern-fidelity + trust layer** (gate black-box
-computational-litho / DSA-defect / AI-EDA tools behind a localized, corroborated obstruction
-receipt)? The tech for all three is built and tested. That choice drives what to harden next.
+The tech for three capabilities is built and tested: the **mature-node reliability layer**, the
+**post-Moore co-optimization layer** (interconnect/thermal), and the **pattern-fidelity + trust
+layer** (localized, corroborated obstruction receipts over black-box computational-litho /
+DSA-defect / AI-EDA tools). The open question is *not* which to sell. It's which one most clearly
+**saves a real engineer real effort on a real design** — and is therefore worth hardening and
+putting in front of the right eyes. That's the test (`docs/VALUE.md`, `docs/ROADMAP.md`): value
+is measured by effort saved, not by sellability. The current ROADMAP picks visibility (#6: aim it
+at the applied-category-theory / verifiable-AI / open-EDA audiences) as the next move.
 
 ## 8. One-line status
 
 A tested, honest chip co-design layer: mature-node IR/EM proven; interconnect-delay and 3D
-thermal won on real data; the coherence engine wired to real silicon and localizing
-double-patterning native conflicts on real GDS — with every boundary documented, not hidden.
-Green and committed at `06e27e7`.
+thermal won on real data; the coherence engine wired to real silicon — localizing
+double-patterning native conflicts on real GDS, and a **real cross-stage divergence** (synthesis
+vs final netlist, attributing the flow's inserted clock/hold buffers) — with every boundary
+documented, not hidden. Green (331 tests) and committed at `741b4ec`.

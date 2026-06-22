@@ -1,19 +1,24 @@
 # KOMPOSOS-V Silicon Co-Design Status
 
-> Current as of 2026-06-20 (America/Los_Angeles), updated after the real-STA run. This is the concise status and
-> handoff document. `docs/SILICON_PLAN.md` remains the architectural plan,
-> `docs/SESSIONS.md` the chronological log, and `docs/SILICON_WHITEPAPER.md` the
+> Older concise status/handoff doc. **For the live snapshot start with `docs/HANDOFF.md`,
+> `docs/VALUE.md`, and `docs/ROADMAP.md`.** `docs/SILICON_PLAN.md` remains the architectural
+> plan, `docs/SESSIONS.md` the chronological log, and `docs/SILICON_WHITEPAPER.md` the
 > methods/findings/directions explainer (the math, the results, and the pivots).
 
 ## Executive status
 
-**Current snapshot (2026-06-20, after `docs/HANDOFF.md`):** the product is the
-mature-node reliability co-design layer, not the timing predictor. Timing triage was
-falsified on optimized self-minted layouts; mature-node IR-drop and measured EM-current
-hotspot detection passed against real OpenROAD output. The reliability report now runs
-find -> fix -> prove with cited material grounding, an evidence ladder, and a trust gate
-over external/learned proposers. The root math stack is mostly substrate/dormant relative
-to this product; see `docs/SILICON_PRODUCT_BOUNDARY.md`.
+**The goal** is a genuinely useful, receipt-backed tool that saves a real engineer real effort
+on a real design — free, a favor, or a service, **not a product to sell or a company**
+(`docs/VALUE.md`). Value is measured by effort saved, not by sellability.
+
+**Snapshot:** the most credible validated capability is the mature-node reliability co-design
+layer. Gate-level timing triage was *falsified* on optimized layouts (the optimizer equalizes
+slack); mature-node IR-drop and measured EM-current hotspot detection passed against real
+OpenROAD output. The report runs find -> fix -> prove with cited material grounding, an evidence
+ladder, and a trust gate over external/learned proposers. Beyond it, the post-Moore tracks won on
+real data too (interconnect-delay `measured` tier, 3D thermal, multi-view + double-patterning
+coherence — see `docs/HANDOFF.md`). The root math stack is mostly substrate/dormant relative to
+the validated path; see `docs/SILICON_PRODUCT_BOUNDARY.md`.
 
 The baseline silicon vertical is working end to end. It can ingest material
 stacks and DEF/SPEF layouts, construct a shared `Category`, run structural flow
@@ -24,10 +29,12 @@ layouts and passed its predeclared scoreboard threshold.
 Multi-pin signal nets now have canonical colored-operad operations. Ricci/Fiedler
 consume an explicit binary projection whose assumption is recorded on every edge.
 
-The current working tree adds LEF-aware net direction plus a provenance-bearing STA
-pipeline. LEF produced a meaningful real-data improvement. STA parsing, timing-path
-mapping, ledger insertion, CLI commands, and timing scoring are complete in code, but
-real STA output and its design context have not been ingested.
+LEF-aware net direction plus a provenance-bearing STA pipeline are in place. LEF produced a
+meaningful real-data improvement. STA parsing, timing-path mapping, ledger insertion, CLI
+commands, and timing scoring are complete in code, and **real STA output with its full hashed
+design context has been ingested at the `measured` tier** (real OpenSTA/OpenROAD via Docker on
+`gcd_sky130hd`, `45_gcd`, and self-minted `orfs_gcd`; reproducers in
+`domains/silicon/sta_flows/`).
 
 ## Capability ledger
 
@@ -45,14 +52,14 @@ real STA output and its design context have not been ingested.
 | Self-learning fix loop (GenerativeLoop) | Complete working tree | `fix_loop.py`: real `core.generator.GenerativeLoop` over typed fix primitives; OPERADUM composes+COG-gates `mitigate_em`/`relieve_congestion`, which become reusable primitives; `verify_em_fix` grounds a swap on a real net (risk 1.0->0.5, gated AGREE); `fixloop` CLI; 6 tests | Fix magnitudes are proxies, not a sim; converges on a fixed primitive set |
 | Scale: fast Ricci + partitioning | Complete working tree | `flow_geometry` method selector (auto/exact/effres/lower; auto keeps gcd/sample exact); `partition.py` spectral (small) + spatial-placement (large, O(n log n)) bisection into bounded regions, disjoint cover proven; per-region curvature + inter-region seam nets; `partition` CLI; 10 tests. **Validated on three real designs — AES (16.8k), ibex_core (29.5k), and large01/netcard (276,249 nodes / 538,359 edges, 100k+ tier): spatial partition -> bounded regions; per-region effres analysis, e.g. large01 158.9s sequential -> 73.1s parallel (512 regions, x2.2, identical results); ibex 12.6s -> 5.1s** where whole-graph is infeasible (276k x 276k dense pinv ~600GB) | EffectiveResistance ~4x faster and preserves the bottleneck; LowerRicci linear but loses it (excluded). Spectral bisection is dense, so large designs use spatial. Parallel via numpy-only worker; on Windows the entry module must be light (spawn re-import). Inter-region edges need the global seam pass |
 | Ricci corridors + Fiedler seam | Complete | Synthetic recovery and real-layout execution | Useful for structure/partitioning; curvature alone is a weak real per-net cost ranker |
-| Waste ledger + agent CLI | Complete working tree | Evidence tiers, provenance, portfolio, exports, LEF/STA/score commands | Real STA artifacts are still absent |
+| Waste ledger + agent CLI | Complete working tree | Evidence tiers, provenance, portfolio, exports, LEF/STA/score commands | Real STA artifacts ingested at the `measured` tier (45_gcd, orfs_gcd); reproducers in `sta_flows/` |
 | SPEF scoreboard | Complete and committed | Real layouts beat a shuffled control | Validates screening against extracted capacitance only |
 | LEF ingestion | Working tree | Nangate45 parsing, real output-pin direction tests, scoreboard delta | Area features are weak; direction correction is the main gain |
-| STA ingestion | **Complete — real measured-tier report ingested (2026-06-20)** | Real grammar variants, source/context hashes, critical-net mapping, ledger + scoreboard tests; `parse_sta` verified on the project's `mcmm3.ok` golden (multi-corner) + committed real-format regression test. **Ran real OpenSTA 2.6.2 (`openroad/opensta` image) on `gcd_sky130hd`: 53 paths, `is_evidence=True`, CLI `sta` → `status: "measured"` with hashed netlist/Liberty/SDC receipts. Relaxed clock (5 ns) meets timing (+0.065 ns); tight clock (1 ns) yields 52/53 real violations (−3.94 ns). Reproducer: `domains/silicon/sta_flows/`** | `measured` tier is now populated on a real design. WSL/Docker revived 2026-06-20. Remaining: a design for which we hold BOTH a DEF and a matched `report_checks`, to run the structural-triage vs real-timing scoreboard (gcd_sky130hd ships no DEF) |
-| Full test suite | Passing | `281 passed` observed on 2026-06-20 before this cleanup pass | Real-data tests skip when local gitignored files are absent |
+| STA ingestion | **Complete — real measured-tier report ingested (2026-06-20)** | Real grammar variants, source/context hashes, critical-net mapping, ledger + scoreboard tests; `parse_sta` verified on the project's `mcmm3.ok` golden (multi-corner) + committed real-format regression test. **Ran real OpenSTA 2.6.2 (`openroad/opensta` image) on `gcd_sky130hd`: 53 paths, `is_evidence=True`, CLI `sta` → `status: "measured"` with hashed netlist/Liberty/SDC receipts. Relaxed clock (5 ns) meets timing (+0.065 ns); tight clock (1 ns) yields 52/53 real violations (−3.94 ns). Reproducer: `domains/silicon/sta_flows/`** | `measured` tier populated on real designs. The structural-triage vs real-timing scoreboard has since been run on designs where we hold BOTH a DEF and a matched `report_checks` (`45_gcd`, self-minted `orfs_gcd`): triage shows a modest correlation on a less-balanced layout and is **falsified** on a fully-converged one — see `sta_flows/README.md` |
+| Full test suite | Passing | `331 passed` (2026-06-21) | Real-data tests skip when local gitignored files are absent |
 
-Committed work currently ends at the SPEF scoreboard commit (`4e736ec`). LEF/STA,
-operadic nets, Verilog crosswalking, their tests, and bridge/ledger changes are uncommitted.
+All of the above is committed; HEAD is `741b4ec` (2026-06-21). LEF/STA, operadic nets, Verilog
+crosswalking, the post-Moore tracks, and their tests are all in the committed history.
 
 ## Measured results
 
@@ -215,6 +222,6 @@ aren't synthesis outputs; feed the self-minting flow more designs to build a lab
 
 - Add a reproducible downloader/manifest with source URLs and hashes for the local
   OpenROAD files; currently the real data is gitignored and tests silently skip.
-- Keep the reliability product import path lean. `tests/test_silicon_product_boundary.py`
-  blocks accidental imports of dormant root math engines from the product entry points.
+- Keep the validated tool's import path lean. `tests/test_silicon_product_boundary.py`
+  blocks accidental imports of dormant root math engines from the tool's entry points.
 - Update module status docstrings and CLI manifests as capabilities graduate.
